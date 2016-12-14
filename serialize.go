@@ -50,6 +50,10 @@ func Serialize(holder interface{}) ([]byte, error) {
 		// NOTE : memory allocation is not just size.
 		b = make([]byte, startOffset, int(t.Type().Size())+startOffset)
 		err = d.serializeStruct(t, &b, startOffset)
+
+		hoge, _ := d.calcSize(t)
+		fmt.Println(len(b))
+		fmt.Println(hoge + uint32(startOffset))
 	} else {
 		b, err = d.serialize(t)
 	}
@@ -364,6 +368,109 @@ func (d *serializer) serialize(rv reflect.Value) ([]byte, error) {
 
 	default:
 		return []byte(""), errors.New(fmt.Sprint("this type is not supported : ", rv.Type()))
+	}
+
+	return ret, nil
+}
+
+func (d *serializer) calcSize(rv reflect.Value) (uint32, error) {
+	ret := uint32(0)
+
+	switch rv.Kind() {
+	case reflect.Int8:
+		ret = uintByte1
+
+	case reflect.Int16:
+		ret = uintByte2
+
+	case reflect.Int32:
+		if isChar(rv) {
+			ret = uintByte2
+		} else {
+			ret = uintByte4
+		}
+
+	case reflect.Int:
+		ret = uintByte4
+
+	case reflect.Int64:
+		if isDuration(rv) {
+			ret = uintByte4 + uintByte8
+		} else {
+			ret = uintByte8
+		}
+
+	case reflect.Uint8:
+		ret = uintByte1
+
+	case reflect.Uint16:
+		ret = uintByte2
+
+	case reflect.Uint32, reflect.Uint:
+		ret = uintByte4
+
+	case reflect.Uint64:
+		ret = uintByte8
+
+	case reflect.Float32:
+		ret = uintByte4
+
+	case reflect.Float64:
+		ret = uintByte8
+
+	case reflect.Bool:
+		ret = uintByte1
+
+	case reflect.String:
+		//str := rv.String()
+		//l := uint32(len(str))
+		l := uint32(rv.Len())
+		ret = l + uintByte4
+
+	case reflect.Array, reflect.Slice:
+		l := rv.Len()
+		if l > 0 {
+			ret += uintByte4
+			// todo : fixed or variable
+			for i := 0; i < l; i++ {
+				s, err := d.calcSize(rv.Index(i))
+				if err != nil {
+					return 0, err
+				}
+				ret += s
+			}
+		} else {
+			// only length info
+			ret = uintByte4
+		}
+
+	case reflect.Struct:
+		if isDateTimeOffset(rv) {
+			ret = uintByte4 + uintByte8 + uintByte2
+		} else if isDateTime(rv) {
+			ret = uintByte4 + uintByte8
+		} else {
+			for i := 0; i < rv.NumField(); i++ {
+				s, err := d.calcSize(rv.Field(i))
+				if err != nil {
+					return 0, err
+				}
+				ret += s
+			}
+		}
+
+	case reflect.Ptr:
+		if rv.IsNil() {
+			return 0, errors.New(fmt.Sprint("pointer is null : ", rv.Type()))
+		}
+		s, err := d.calcSize(rv.Elem())
+		if err != nil {
+			return 0, err
+		}
+		ret = s
+
+	default:
+		return 0, errors.New(fmt.Sprint("this type is not supported : ", rv.Type()))
 	}
 
 	return ret, nil
