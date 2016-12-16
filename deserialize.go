@@ -372,6 +372,34 @@ func (d *deserializer) deserialize(rv reflect.Value, offset uint32) (uint32, err
 		// update
 		offset = o
 
+	case reflect.Map:
+		key := rv.Type().Key()
+		value := rv.Type().Elem()
+
+		if rv.IsNil() {
+			rv.Set(reflect.MakeMap(rv.Type()))
+		}
+
+		// map length
+		b, offset := d.read_s4(offset)
+		l := int(binary.LittleEndian.Uint32(b))
+
+		for i := 0; i < l; i++ {
+			k := reflect.New(key).Elem()
+			v := reflect.New(value).Elem()
+			o, err := d.deserialize(k, offset)
+			if err != nil {
+				return 0, err
+			}
+			o, err = d.deserialize(v, o)
+			if err != nil {
+				return 0, err
+			}
+
+			rv.SetMapIndex(k, v)
+			offset = o
+		}
+
 	case reflect.Ptr:
 		e := rv.Type().Elem()
 		v := reflect.New(e).Elem()

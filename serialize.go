@@ -82,6 +82,27 @@ func (d *serializer) serializeStruct(rv reflect.Value, offset uint32, size uint3
 	return nil
 }
 
+func (d *serializer) isFixedSize(rv reflect.Value) bool {
+	ret := false
+	switch rv.Kind() {
+	case
+		reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int,
+		reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint,
+		reflect.Float32, reflect.Float64,
+		reflect.Bool:
+		ret = true
+
+	case
+		reflect.Struct:
+		if isDateTimeOffset(rv) || isDateTime(rv) {
+			ret = true
+		}
+
+	default:
+	}
+	return ret
+}
+
 func (d *serializer) calcSize(rv reflect.Value) (uint32, error) {
 	ret := uint32(0)
 
@@ -131,8 +152,6 @@ func (d *serializer) calcSize(rv reflect.Value) (uint32, error) {
 		ret = uintByte1
 
 	case reflect.String:
-		//str := rv.String()
-		//l := uint32(len(str))
 		l := uint32(rv.Len())
 		ret = l + uintByte4
 
@@ -140,13 +159,21 @@ func (d *serializer) calcSize(rv reflect.Value) (uint32, error) {
 		l := rv.Len()
 		if l > 0 {
 			ret += uintByte4
-			// todo : fixed or variable
-			for i := 0; i < l; i++ {
-				s, err := d.calcSize(rv.Index(i))
+			isTypeFixed := d.isFixedSize(rv.Index(0))
+			if isTypeFixed {
+				s, err := d.calcSize(rv.Index(0))
 				if err != nil {
 					return 0, err
 				}
-				ret += s
+				ret += s * uint32(l)
+			} else {
+				for i := 0; i < l; i++ {
+					s, err := d.calcSize(rv.Index(i))
+					if err != nil {
+						return 0, err
+					}
+					ret += s
+				}
 			}
 		} else {
 			// only length info
@@ -165,6 +192,69 @@ func (d *serializer) calcSize(rv reflect.Value) (uint32, error) {
 					return 0, err
 				}
 				ret += s
+			}
+		}
+
+	case reflect.Map:
+		// length
+		ret += uintByte4
+		l := uint32(rv.Len())
+
+		if l < 1 {
+			return ret, nil
+		}
+		// check fixed type
+		keys := rv.MapKeys()
+		isFixedKey := d.isFixedSize(keys[0])
+		isFixedVal := d.isFixedSize(rv.MapIndex(keys[0]))
+
+		if isFixedKey && isFixedVal {
+			sizeK, err := d.calcSize(keys[0])
+			if err != nil {
+				return 0, err
+			}
+			sizeV, err := d.calcSize(rv.MapIndex(keys[0]))
+			if err != nil {
+				return 0, err
+			}
+			ret += (sizeK + sizeV) * l
+		} else if isFixedKey && !isFixedVal {
+			sizeK, err := d.calcSize(keys[0])
+			if err != nil {
+				return 0, err
+			}
+
+			for _, k := range keys {
+				sizeV, err := d.calcSize(rv.MapIndex(k))
+				if err != nil {
+					return 0, err
+				}
+				ret += sizeK + sizeV
+			}
+
+		} else if !isFixedKey && isFixedVal {
+			sizeV, err := d.calcSize(rv.MapIndex(keys[0]))
+			if err != nil {
+				return 0, err
+			}
+			for _, k := range keys {
+				sizeK, err := d.calcSize(k)
+				if err != nil {
+					return 0, err
+				}
+				ret += sizeK + sizeV
+			}
+		} else {
+			for _, k := range keys {
+				sizeK, err := d.calcSize(k)
+				if err != nil {
+					return 0, err
+				}
+				sizeV, err := d.calcSize(rv.MapIndex(k))
+				if err != nil {
+					return 0, err
+				}
+				ret += sizeK + sizeV
 			}
 		}
 
@@ -437,6 +527,31 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 				offset += s
 				size += s
 			}
+		}
+
+	case reflect.Map:
+		// length
+		l := rv.Len()
+		d.create[offset+0] = byte(l)
+		d.create[offset+1] = byte(l >> 8)
+		d.create[offset+2] = byte(l >> 16)
+		d.create[offset+3] = byte(l >> 24)
+		size += uintByte4
+		offset += uintByte4
+
+		// todo : check fixed type
+
+		for _, k := range rv.MapKeys() {
+			addOffByK, err := d.serialize(k, offset)
+			if err != nil {
+				return 0, err
+			}
+			addOffByV, err := d.serialize(rv.MapIndex(k), offset+addOffByK)
+			if err != nil {
+				return 0, err
+			}
+			offset += addOffByK + addOffByV
+			size += addOffByK + addOffByV
 		}
 
 	case reflect.Ptr:

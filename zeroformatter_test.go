@@ -291,6 +291,26 @@ func TestZeroformatter(t *testing.T) {
 		t.Error(_p(*vSt, rSt))
 	}
 
+	rMapInt := map[int]int{1: 2, 3: 4, math.MaxInt32: math.MinInt32}
+	vMapInt := map[int]int{}
+	if err := f(rMapInt, &vMapInt, false); err != nil {
+		t.Error(err)
+	}
+	if !reflect.DeepEqual(rMapInt, vMapInt) {
+		t.Error(_p(rMapInt, vMapInt))
+	}
+	t.Log(vMapInt)
+
+	rMapStr := map[string]float32{"this": 1.2, "is": 3.4, "float map": 56.789}
+	vMapStr := map[string]float32{}
+	if err := f(rMapStr, &vMapStr, false); err != nil {
+		t.Error(err)
+	}
+	if !reflect.DeepEqual(rMapStr, vMapStr) {
+		t.Error(_p(rMapStr, vMapStr))
+	}
+	t.Log(vMapStr)
+
 	t.Log(rSt)
 	t.Log("stst ", unsafe.Sizeof(*vSt), " : ", unsafe.Sizeof(rSt))
 
