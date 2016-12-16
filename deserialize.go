@@ -144,8 +144,7 @@ func (d *deserializer) deserialize(rv reflect.Value, offset uint32) (uint32, err
 	switch rv.Kind() {
 	case reflect.Int8:
 		b, o := d.read_s1(offset)
-		v := int8(b)
-		rv.Set(reflect.ValueOf(v))
+		rv.SetInt(int64(b))
 		// update
 		offset = o
 
@@ -153,8 +152,7 @@ func (d *deserializer) deserialize(rv reflect.Value, offset uint32) (uint32, err
 		// Int16 [short(2)]
 		b, o := d.read_s2(offset)
 		_v := binary.LittleEndian.Uint16(b)
-		v := int16(_v)
-		rv.Set(reflect.ValueOf(v))
+		rv.SetInt(int64(_v))
 		// update
 		offset = o
 
@@ -174,8 +172,8 @@ func (d *deserializer) deserialize(rv reflect.Value, offset uint32) (uint32, err
 			// Int32 [int(4)]
 			b, o := d.read_s4(offset)
 			_v := binary.LittleEndian.Uint32(b)
-			v := int32(int32(_v))
-			rv.Set(reflect.ValueOf(v))
+			// NOTE : double cast
+			rv.SetInt(int64(int32(_v)))
 			// update
 			offset = o
 		}
@@ -185,8 +183,7 @@ func (d *deserializer) deserialize(rv reflect.Value, offset uint32) (uint32, err
 		b, o := d.read_s4(offset)
 		_v := binary.LittleEndian.Uint32(b)
 		// NOTE : double cast
-		v := int(int32(_v))
-		rv.Set(reflect.ValueOf(v))
+		rv.SetInt(int64(int32(_v)))
 		// update
 		offset = o
 
@@ -205,9 +202,8 @@ func (d *deserializer) deserialize(rv reflect.Value, offset uint32) (uint32, err
 		} else {
 			// Int64 [long(8)]
 			b, o := d.read_s8(offset)
-			_v := binary.LittleEndian.Uint64(b)
-			v := int64(_v)
-			rv.SetInt(v)
+			v := binary.LittleEndian.Uint64(b)
+			rv.SetInt(int64(v))
 			// update
 			offset = o
 		}
@@ -215,8 +211,7 @@ func (d *deserializer) deserialize(rv reflect.Value, offset uint32) (uint32, err
 	case reflect.Uint8:
 		// byte in cSharp
 		_v, o := d.read_s1(offset)
-		v := uint8(_v)
-		rv.Set(reflect.ValueOf(v))
+		rv.SetUint(uint64(_v))
 		// update
 		offset = o
 
@@ -224,22 +219,21 @@ func (d *deserializer) deserialize(rv reflect.Value, offset uint32) (uint32, err
 		// Uint16 / Char
 		b, o := d.read_s2(offset)
 		v := binary.LittleEndian.Uint16(b)
-		rv.Set(reflect.ValueOf(v))
+		rv.SetUint(uint64(v))
 		// update
 		offset = o
 
 	case reflect.Uint32:
 		b, o := d.read_s4(offset)
 		v := binary.LittleEndian.Uint32(b)
-		rv.Set(reflect.ValueOf(v))
+		rv.SetUint(uint64(v))
 		// update
 		offset = o
 
 	case reflect.Uint:
 		b, o := d.read_s4(offset)
-		_v := binary.LittleEndian.Uint32(b)
-		v := uint(_v)
-		rv.Set(reflect.ValueOf(v))
+		v := binary.LittleEndian.Uint32(b)
+		rv.SetUint(uint64(v))
 		// update
 		offset = o
 
@@ -255,7 +249,7 @@ func (d *deserializer) deserialize(rv reflect.Value, offset uint32) (uint32, err
 		b, o := d.read_s4(offset)
 		_v := binary.LittleEndian.Uint32(b)
 		v := math.Float32frombits(_v)
-		rv.Set(reflect.ValueOf(v))
+		rv.SetFloat(float64(v))
 		// update
 		offset = o
 
@@ -264,7 +258,7 @@ func (d *deserializer) deserialize(rv reflect.Value, offset uint32) (uint32, err
 		b, o := d.read_s8(offset)
 		_v := binary.LittleEndian.Uint64(b)
 		v := math.Float64frombits(_v)
-		rv.Set(reflect.ValueOf(v))
+		rv.SetFloat(v)
 		// update
 		offset = o
 
