@@ -82,6 +82,34 @@ func (d *serializer) serializeStruct(rv reflect.Value, offset uint32, size uint3
 	return nil
 }
 
+func (d *serializer) isFixedSize(rv reflect.Value) bool {
+	ret := false
+	switch rv.Kind() {
+	case reflect.Int8:
+	case reflect.Int16:
+	case reflect.Int32:
+	case reflect.Int:
+	case reflect.Int64:
+	case reflect.Uint8:
+	case reflect.Uint16:
+	case reflect.Uint32, reflect.Uint:
+	case reflect.Uint64:
+	case reflect.Float32:
+	case reflect.Float64:
+	case reflect.Bool:
+		ret = true
+
+	case reflect.Struct:
+		if isDateTimeOffset(rv) || isDateTime(rv) {
+			ret = true
+		}
+
+	default:
+
+	}
+	return ret
+}
+
 func (d *serializer) calcSize(rv reflect.Value) (uint32, error) {
 	ret := uint32(0)
 
