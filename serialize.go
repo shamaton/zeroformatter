@@ -131,8 +131,6 @@ func (d *serializer) calcSize(rv reflect.Value) (uint32, error) {
 		ret = uintByte1
 
 	case reflect.String:
-		//str := rv.String()
-		//l := uint32(len(str))
 		l := uint32(rv.Len())
 		ret = l + uintByte4
 
@@ -166,6 +164,24 @@ func (d *serializer) calcSize(rv reflect.Value) (uint32, error) {
 				}
 				ret += s
 			}
+		}
+
+	case reflect.Map:
+		// length
+		ret += uintByte4
+
+		// todo : check fixed type
+
+		for _, k := range rv.MapKeys() {
+			sizeK, err := d.calcSize(k)
+			if err != nil {
+				return 0, err
+			}
+			sizeV, err := d.calcSize(rv.MapIndex(k))
+			if err != nil {
+				return 0, err
+			}
+			ret += sizeK + sizeV
 		}
 
 	case reflect.Ptr:
@@ -437,6 +453,31 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 				offset += s
 				size += s
 			}
+		}
+
+	case reflect.Map:
+		// length
+		l := rv.Len()
+		d.create[offset+0] = byte(l)
+		d.create[offset+1] = byte(l >> 8)
+		d.create[offset+2] = byte(l >> 16)
+		d.create[offset+3] = byte(l >> 24)
+		size += uintByte4
+		offset += uintByte4
+
+		// todo : check fixed type
+
+		for _, k := range rv.MapKeys() {
+			addOffByK, err := d.serialize(k, offset)
+			if err != nil {
+				return 0, err
+			}
+			addOffByV, err := d.serialize(rv.MapIndex(k), offset+addOffByK)
+			if err != nil {
+				return 0, err
+			}
+			offset += addOffByK + addOffByV
+			size += addOffByK + addOffByV
 		}
 
 	case reflect.Ptr:
