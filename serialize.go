@@ -159,13 +159,21 @@ func (d *serializer) calcSize(rv reflect.Value) (uint32, error) {
 		l := rv.Len()
 		if l > 0 {
 			ret += uintByte4
-			// todo : fixed or variable
-			for i := 0; i < l; i++ {
-				s, err := d.calcSize(rv.Index(i))
+			isTypeFixed := d.isFixedSize(rv.Index(0))
+			if isTypeFixed {
+				s, err := d.calcSize(rv.Index(0))
 				if err != nil {
 					return 0, err
 				}
-				ret += s
+				ret += s * uint32(l)
+			} else {
+				for i := 0; i < l; i++ {
+					s, err := d.calcSize(rv.Index(i))
+					if err != nil {
+						return 0, err
+					}
+					ret += s
+				}
 			}
 		} else {
 			// only length info
