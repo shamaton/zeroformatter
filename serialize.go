@@ -85,27 +85,20 @@ func (d *serializer) serializeStruct(rv reflect.Value, offset uint32, size uint3
 func (d *serializer) isFixedSize(rv reflect.Value) bool {
 	ret := false
 	switch rv.Kind() {
-	case reflect.Int8:
-	case reflect.Int16:
-	case reflect.Int32:
-	case reflect.Int:
-	case reflect.Int64:
-	case reflect.Uint8:
-	case reflect.Uint16:
-	case reflect.Uint32, reflect.Uint:
-	case reflect.Uint64:
-	case reflect.Float32:
-	case reflect.Float64:
-	case reflect.Bool:
+	case
+		reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int,
+		reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint,
+		reflect.Float32, reflect.Float64,
+		reflect.Bool:
 		ret = true
 
-	case reflect.Struct:
+	case
+		reflect.Struct:
 		if isDateTimeOffset(rv) || isDateTime(rv) {
 			ret = true
 		}
 
 	default:
-
 	}
 	return ret
 }
@@ -197,19 +190,64 @@ func (d *serializer) calcSize(rv reflect.Value) (uint32, error) {
 	case reflect.Map:
 		// length
 		ret += uintByte4
+		l := uint32(rv.Len())
 
-		// todo : check fixed type
+		if l < 1 {
+			return ret, nil
+		}
+		// check fixed type
+		keys := rv.MapKeys()
+		isFixedKey := d.isFixedSize(keys[0])
+		isFixedVal := d.isFixedSize(rv.MapIndex(keys[0]))
 
-		for _, k := range rv.MapKeys() {
-			sizeK, err := d.calcSize(k)
+		if isFixedKey && isFixedVal {
+			sizeK, err := d.calcSize(keys[0])
 			if err != nil {
 				return 0, err
 			}
-			sizeV, err := d.calcSize(rv.MapIndex(k))
+			sizeV, err := d.calcSize(rv.MapIndex(keys[0]))
 			if err != nil {
 				return 0, err
 			}
-			ret += sizeK + sizeV
+			ret += (sizeK + sizeV) * l
+		} else if isFixedKey && !isFixedVal {
+			sizeK, err := d.calcSize(keys[0])
+			if err != nil {
+				return 0, err
+			}
+
+			for _, k := range keys {
+				sizeV, err := d.calcSize(rv.MapIndex(k))
+				if err != nil {
+					return 0, err
+				}
+				ret += sizeK + sizeV
+			}
+
+		} else if !isFixedKey && isFixedVal {
+			sizeV, err := d.calcSize(rv.MapIndex(keys[0]))
+			if err != nil {
+				return 0, err
+			}
+			for _, k := range keys {
+				sizeK, err := d.calcSize(k)
+				if err != nil {
+					return 0, err
+				}
+				ret += sizeK + sizeV
+			}
+		} else {
+			for _, k := range keys {
+				sizeK, err := d.calcSize(k)
+				if err != nil {
+					return 0, err
+				}
+				sizeV, err := d.calcSize(rv.MapIndex(k))
+				if err != nil {
+					return 0, err
+				}
+				ret += sizeK + sizeV
+			}
 		}
 
 	case reflect.Ptr:
