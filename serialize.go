@@ -10,22 +10,19 @@ import (
 )
 
 const (
-	uintByte1 uint32 = 1 << iota
-	uintByte2
-	uintByte4
-	uintByte8
-)
-
-const (
-	intByte1 = 1 << iota
-	intByte2
-	intByte4
-	intByte8
+	byte1 uint32 = 1 << iota
+	byte2
+	byte4
+	byte8
 )
 
 type serializer struct {
 	data   []byte
 	create []byte
+
+	// todo ここにサイズ計算時に突っ込んで、あとからpopする？
+	queueMapKey   [][]reflect.Value
+	queueMapValue [][]reflect.Value
 }
 
 func createSerializer() *serializer {
@@ -45,13 +42,13 @@ func Serialize(holder interface{}) ([]byte, error) {
 
 	var err error
 	if t.Kind() == reflect.Struct && !isDateTime(t) && !isDateTimeOffset(t) {
-		startOffset := (2 + t.NumField()) * intByte4
+		startOffset := uint32(2+t.NumField()) * byte4
 
 		dataPartSize, _ := d.calcSize(t)
-		size := uint32(startOffset) + dataPartSize
+		size := startOffset + dataPartSize
 		d.create = make([]byte, size)
 
-		err = d.serializeStruct(t, uint32(startOffset), size)
+		err = d.serializeStruct(t, startOffset, size)
 	} else {
 		size, _ := d.calcSize(t)
 		d.create = make([]byte, size)
@@ -63,7 +60,7 @@ func Serialize(holder interface{}) ([]byte, error) {
 
 func (d *serializer) serializeStruct(rv reflect.Value, offset uint32, size uint32) error {
 	nf := rv.NumField()
-	index := 2 * intByte4
+	index := 2 * byte4
 	for i := 0; i < nf; i++ {
 		s, err := d.serialize(rv.Field(i), offset)
 		if err != nil {
@@ -71,7 +68,7 @@ func (d *serializer) serializeStruct(rv reflect.Value, offset uint32, size uint3
 		}
 
 		d.create[index], d.create[index+1], d.create[index+2], d.create[index+3] = byte(offset), byte(offset>>8), byte(offset>>16), byte(offset>>24)
-		index += intByte4
+		index += byte4
 		offset += s
 	}
 	// size
@@ -108,57 +105,57 @@ func (d *serializer) calcSize(rv reflect.Value) (uint32, error) {
 
 	switch rv.Kind() {
 	case reflect.Int8:
-		ret = uintByte1
+		ret = byte1
 
 	case reflect.Int16:
-		ret = uintByte2
+		ret = byte2
 
 	case reflect.Int32:
 		if isChar(rv) {
-			ret = uintByte2
+			ret = byte2
 		} else {
-			ret = uintByte4
+			ret = byte4
 		}
 
 	case reflect.Int:
-		ret = uintByte4
+		ret = byte4
 
 	case reflect.Int64:
 		if isDuration(rv) {
-			ret = uintByte4 + uintByte8
+			ret = byte4 + byte8
 		} else {
-			ret = uintByte8
+			ret = byte8
 		}
 
 	case reflect.Uint8:
-		ret = uintByte1
+		ret = byte1
 
 	case reflect.Uint16:
-		ret = uintByte2
+		ret = byte2
 
 	case reflect.Uint32, reflect.Uint:
-		ret = uintByte4
+		ret = byte4
 
 	case reflect.Uint64:
-		ret = uintByte8
+		ret = byte8
 
 	case reflect.Float32:
-		ret = uintByte4
+		ret = byte4
 
 	case reflect.Float64:
-		ret = uintByte8
+		ret = byte8
 
 	case reflect.Bool:
-		ret = uintByte1
+		ret = byte1
 
 	case reflect.String:
 		l := uint32(rv.Len())
-		ret = l + uintByte4
+		ret = l + byte4
 
 	case reflect.Array, reflect.Slice:
 		l := rv.Len()
 		if l > 0 {
-			ret += uintByte4
+			ret += byte4
 			isTypeFixed := d.isFixedSize(rv.Index(0))
 			if isTypeFixed {
 				s, err := d.calcSize(rv.Index(0))
@@ -177,14 +174,14 @@ func (d *serializer) calcSize(rv reflect.Value) (uint32, error) {
 			}
 		} else {
 			// only length info
-			ret = uintByte4
+			ret = byte4
 		}
 
 	case reflect.Struct:
 		if isDateTimeOffset(rv) {
-			ret = uintByte4 + uintByte8 + uintByte2
+			ret = byte4 + byte8 + byte2
 		} else if isDateTime(rv) {
-			ret = uintByte4 + uintByte8
+			ret = byte4 + byte8
 		} else {
 			for i := 0; i < rv.NumField(); i++ {
 				s, err := d.calcSize(rv.Field(i))
@@ -197,7 +194,7 @@ func (d *serializer) calcSize(rv reflect.Value) (uint32, error) {
 
 	case reflect.Map:
 		// length
-		ret += uintByte4
+		ret += byte4
 		l := uint32(rv.Len())
 
 		if l < 1 {
@@ -282,13 +279,13 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 	case reflect.Int8:
 		v := rv.Int()
 		d.create[offset] = byte(v)
-		size += uintByte1
+		size += byte1
 
 	case reflect.Int16:
 		v := rv.Int()
 		d.create[offset+0] = byte(v)
 		d.create[offset+1] = byte(v >> 8)
-		size += uintByte2
+		size += byte2
 
 	case reflect.Int32:
 		if isChar(rv) {
@@ -298,14 +295,14 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 			v := enc[0]
 			d.create[offset+0] = byte(v)
 			d.create[offset+1] = byte(v >> 8)
-			size += uintByte2
+			size += byte2
 		} else {
 			v := rv.Int()
 			d.create[offset+0] = byte(v)
 			d.create[offset+1] = byte(v >> 8)
 			d.create[offset+2] = byte(v >> 16)
 			d.create[offset+3] = byte(v >> 24)
-			size += uintByte4
+			size += byte4
 		}
 
 	case reflect.Int:
@@ -314,14 +311,14 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 		d.create[offset+1] = byte(v >> 8)
 		d.create[offset+2] = byte(v >> 16)
 		d.create[offset+3] = byte(v >> 24)
-		size += uintByte4
+		size += byte4
 
 	case reflect.Int64:
 		if isDuration(rv) {
 			// seconds
 			ns := rv.MethodByName("Nanoseconds").Call([]reflect.Value{})[0]
 			nanoseconds := ns.Int()
-			sec, nsec := nanoseconds/(1000*1000), int32(nanoseconds%(1000*1000))
+			sec, nsec := nanoseconds/(1000*1000), int64(nanoseconds%(1000*1000))
 			d.create[offset+0] = byte(sec)
 			d.create[offset+1] = byte(sec >> 8)
 			d.create[offset+2] = byte(sec >> 16)
@@ -330,15 +327,15 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 			d.create[offset+5] = byte(sec >> 40)
 			d.create[offset+6] = byte(sec >> 48)
 			d.create[offset+7] = byte(sec >> 56)
-			size += uintByte8
-			offset += uintByte8
+			size += byte8
+			offset += byte8
 
 			// nanos
 			d.create[offset+0] = byte(nsec)
 			d.create[offset+1] = byte(nsec >> 8)
 			d.create[offset+2] = byte(nsec >> 16)
 			d.create[offset+3] = byte(nsec >> 24)
-			size += uintByte4
+			size += byte4
 		} else {
 
 			v := rv.Int()
@@ -350,19 +347,19 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 			d.create[offset+5] = byte(v >> 40)
 			d.create[offset+6] = byte(v >> 48)
 			d.create[offset+7] = byte(v >> 56)
-			size += uintByte8
+			size += byte8
 		}
 
 	case reflect.Uint8:
 		v := rv.Uint()
 		d.create[offset+0] = byte(v)
-		size += uintByte1
+		size += byte1
 
 	case reflect.Uint16:
 		v := rv.Uint()
 		d.create[offset+0] = byte(v)
 		d.create[offset+1] = byte(v >> 8)
-		size += uintByte2
+		size += byte2
 
 	case reflect.Uint32, reflect.Uint:
 		v := rv.Uint()
@@ -370,7 +367,7 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 		d.create[offset+1] = byte(v >> 8)
 		d.create[offset+2] = byte(v >> 16)
 		d.create[offset+3] = byte(v >> 24)
-		size += uintByte4
+		size += byte4
 
 	case reflect.Uint64:
 		v := rv.Uint()
@@ -382,7 +379,7 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 		d.create[offset+5] = byte(v >> 40)
 		d.create[offset+6] = byte(v >> 48)
 		d.create[offset+7] = byte(v >> 56)
-		size += uintByte8
+		size += byte8
 
 	case reflect.Float32:
 		v := math.Float32bits(float32(rv.Float()))
@@ -390,7 +387,7 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 		d.create[offset+1] = byte(v >> 8)
 		d.create[offset+2] = byte(v >> 16)
 		d.create[offset+3] = byte(v >> 24)
-		size += uintByte4
+		size += byte4
 
 	case reflect.Float64:
 		v := math.Float64bits(rv.Float())
@@ -402,7 +399,7 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 		d.create[offset+5] = byte(v >> 40)
 		d.create[offset+6] = byte(v >> 48)
 		d.create[offset+7] = byte(v >> 56)
-		size += uintByte8
+		size += byte8
 
 	case reflect.Bool:
 
@@ -411,7 +408,7 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 		} else {
 			d.create[offset+0] = 0x00
 		}
-		size += uintByte1
+		size += byte1
 
 	case reflect.String:
 		str := rv.String()
@@ -420,8 +417,8 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 		d.create[offset+1] = byte(l >> 8)
 		d.create[offset+2] = byte(l >> 16)
 		d.create[offset+3] = byte(l >> 24)
-		size += uintByte4
-		offset += uintByte4
+		size += byte4
+		offset += byte4
 
 		// NOTE : unsafe
 		strBytes := *(*[]byte)(unsafe.Pointer(&str))
@@ -437,8 +434,8 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 			d.create[offset+1] = byte(l >> 8)
 			d.create[offset+2] = byte(l >> 16)
 			d.create[offset+3] = byte(l >> 24)
-			size += uintByte4
-			offset += uintByte4
+			size += byte4
+			offset += byte4
 
 			for i := 0; i < l; i++ {
 				s, err := d.serialize(rv.Index(i), offset)
@@ -454,7 +451,7 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 			d.create[offset+1] = 0
 			d.create[offset+2] = 0
 			d.create[offset+3] = 0
-			size += uintByte4
+			size += byte4
 		}
 
 	case reflect.Struct:
@@ -481,21 +478,21 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 			d.create[offset+5] = byte(seconds >> 40)
 			d.create[offset+6] = byte(seconds >> 48)
 			d.create[offset+7] = byte(seconds >> 56)
-			size += uintByte8
-			offset += uintByte8
+			size += byte8
+			offset += byte8
 
 			// nanos to byte
 			d.create[offset+0] = byte(nanos)
 			d.create[offset+1] = byte(nanos >> 8)
 			d.create[offset+2] = byte(nanos >> 16)
 			d.create[offset+3] = byte(nanos >> 24)
-			size += uintByte4
-			offset += uintByte4
+			size += byte4
+			offset += byte4
 
 			// offset to byte
 			d.create[offset+0] = byte(offMin)
 			d.create[offset+1] = byte(offMin >> 8)
-			size += uintByte2
+			size += byte2
 		} else if isDateTime(rv) {
 			// seconds
 			unixTime := rv.MethodByName("Unix").Call([]reflect.Value{})
@@ -508,8 +505,8 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 			d.create[offset+5] = byte(sec >> 40)
 			d.create[offset+6] = byte(sec >> 48)
 			d.create[offset+7] = byte(sec >> 56)
-			size += uintByte8
-			offset += uintByte8
+			size += byte8
+			offset += byte8
 
 			// nanos
 			nsec := int32(rv.FieldByName("nsec").Int())
@@ -517,7 +514,7 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 			d.create[offset+1] = byte(nsec >> 8)
 			d.create[offset+2] = byte(nsec >> 16)
 			d.create[offset+3] = byte(nsec >> 24)
-			size += uintByte4
+			size += byte4
 		} else {
 			for i := 0; i < rv.NumField(); i++ {
 				s, err := d.serialize(rv.Field(i), offset)
@@ -536,8 +533,8 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 		d.create[offset+1] = byte(l >> 8)
 		d.create[offset+2] = byte(l >> 16)
 		d.create[offset+3] = byte(l >> 24)
-		size += uintByte4
-		offset += uintByte4
+		size += byte4
+		offset += byte4
 
 		// todo : check fixed type
 
