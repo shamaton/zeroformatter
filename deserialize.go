@@ -17,13 +17,13 @@ type deserializer struct {
 	data []byte
 }
 
+const minStructDataSize = 9
+
 func createDeserializer(data []byte) *deserializer {
 	return &deserializer{
 		data: data,
 	}
 }
-
-const minStructDataSize = 9
 
 func Deserialize(holder interface{}, data []byte) error {
 	ds := createDeserializer(data)
@@ -67,11 +67,12 @@ func (d *deserializer) deserializeStruct(t reflect.Value) error {
 	// index
 	b, offset = d.read_s4(offset)
 	dataIndex := binary.LittleEndian.Uint32(b)
-	if dataIndex != uint32(t.NumField()-1) {
-		return fmt.Errorf("data index is diffrent [ %d : %d ]", dataIndex, t.NumField()-1)
+	numField := t.NumField()
+	if dataIndex != uint32(numField-1) {
+		return fmt.Errorf("data index is diffrent [ %d : %d ]", dataIndex, numField-1)
 	}
 
-	for i := 0; i < t.NumField(); i++ {
+	for i := 0; i < numField; i++ {
 		b, offset = d.read_s4(offset)
 		dataOffset := binary.LittleEndian.Uint32(b)
 		if _, err := d.deserialize(t.Field(i), dataOffset); err != nil {
@@ -116,26 +117,6 @@ func isChar(value reflect.Value) bool {
 		return true
 	}
 	return false
-}
-
-func (d *deserializer) read_s1(index uint32) (byte, uint32) {
-	rb := uint32(1)
-	return d.data[index], index + rb
-}
-
-func (d *deserializer) read_s2(index uint32) ([]byte, uint32) {
-	rb := uint32(2)
-	return d.data[index : index+rb], index + rb
-}
-
-func (d *deserializer) read_s4(index uint32) ([]byte, uint32) {
-	rb := uint32(4)
-	return d.data[index : index+rb], index + rb
-}
-
-func (d *deserializer) read_s8(index uint32) ([]byte, uint32) {
-	rb := uint32(8)
-	return d.data[index : index+rb], index + rb
 }
 
 func (d *deserializer) deserialize(rv reflect.Value, offset uint32) (uint32, error) {
