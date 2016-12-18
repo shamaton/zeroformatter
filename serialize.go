@@ -19,13 +19,15 @@ const (
 type serializer struct {
 	create []byte
 
-	// todo ここにサイズ計算時に突っ込んで、あとからpopする？
 	queueMapKey   [][]reflect.Value
-	queueMapValue [][]reflect.Value
+	queueMapValue []reflect.Value
 }
 
 func createSerializer() *serializer {
-	return &serializer{}
+	return &serializer{
+		queueMapKey:   [][]reflect.Value{},
+		queueMapValue: []reflect.Value{},
+	}
 }
 
 func Serialize(holder interface{}) ([]byte, error) {
@@ -201,52 +203,40 @@ func (d *serializer) calcSize(rv reflect.Value) (uint32, error) {
 		}
 		// check fixed type
 		keys := rv.MapKeys()
+
+		d.queueMapKey = append(d.queueMapKey, keys)
+
 		isFixedKey := d.isFixedSize(keys[0])
-		isFixedVal := d.isFixedSize(rv.MapIndex(keys[0]))
-
-		if isFixedKey && isFixedVal {
+		if isFixedKey {
 			sizeK, err := d.calcSize(keys[0])
 			if err != nil {
 				return 0, err
 			}
-			sizeV, err := d.calcSize(rv.MapIndex(keys[0]))
-			if err != nil {
-				return 0, err
-			}
-			ret += (sizeK + sizeV) * l
-		} else if isFixedKey && !isFixedVal {
-			sizeK, err := d.calcSize(keys[0])
-			if err != nil {
-				return 0, err
-			}
-
-			for _, k := range keys {
-				sizeV, err := d.calcSize(rv.MapIndex(k))
+			startI := len(d.queueMapValue)
+			add := make([]reflect.Value, l)
+			d.queueMapValue = append(d.queueMapValue, add...)
+			for i, k := range keys {
+				value := rv.MapIndex(k)
+				d.queueMapValue[startI+i] = value
+				sizeV, err := d.calcSize(value)
 				if err != nil {
 					return 0, err
 				}
 				ret += sizeK + sizeV
 			}
 
-		} else if !isFixedKey && isFixedVal {
-			sizeV, err := d.calcSize(rv.MapIndex(keys[0]))
-			if err != nil {
-				return 0, err
-			}
-			for _, k := range keys {
-				sizeK, err := d.calcSize(k)
-				if err != nil {
-					return 0, err
-				}
-				ret += sizeK + sizeV
-			}
 		} else {
-			for _, k := range keys {
+			startI := len(d.queueMapValue)
+			add := make([]reflect.Value, l)
+			d.queueMapValue = append(d.queueMapValue, add...)
+			for i, k := range keys {
 				sizeK, err := d.calcSize(k)
 				if err != nil {
 					return 0, err
 				}
-				sizeV, err := d.calcSize(rv.MapIndex(k))
+				value := rv.MapIndex(k)
+				d.queueMapValue[startI+i] = value
+				sizeV, err := d.calcSize(value)
 				if err != nil {
 					return 0, err
 				}
@@ -446,19 +436,30 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 		size += byte4
 		offset += byte4
 
-		// todo : check fixed type
+		keys := d.queueMapKey[0]
+		keysLen := len(keys)
+		values := d.queueMapValue[:keysLen]
 
-		for _, k := range rv.MapKeys() {
+		for i, k := range keys {
 			addOffByK, err := d.serialize(k, offset)
 			if err != nil {
 				return 0, err
 			}
-			addOffByV, err := d.serialize(rv.MapIndex(k), offset+addOffByK)
+			addOffByV, err := d.serialize(values[i], offset+addOffByK)
 			if err != nil {
 				return 0, err
 			}
 			offset += addOffByK + addOffByV
 			size += addOffByK + addOffByV
+		}
+
+		// update queue
+		if len(d.queueMapKey) > 0 {
+			d.queueMapKey = d.queueMapKey[1:]
+			d.queueMapValue = d.queueMapValue[keysLen:]
+		} else {
+			d.queueMapKey = d.queueMapKey[:0]
+			d.queueMapValue = d.queueMapValue[:0]
 		}
 
 	case reflect.Ptr:
