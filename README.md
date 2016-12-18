@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/shamaton/zeroformatter.svg?branch=master)](https://travis-ci.org/shamaton/zeroformatter)
 
-golang version zeroformatter
+golang version [zeroformatter](https://github.com/neuecc/ZeroFormatter)
 
 ## Usage
 ### Installation
@@ -11,7 +11,29 @@ go get github.com/shamaton/zeroformatter
 ```
 
 ### How to use
-under construction...
+#### use simply
+```go
+package main;
+
+import "github.com/shamaton/zeroformatter"
+
+func main() {
+	type Struct struct {
+		String string
+	}
+	h := Struct{String: "zeroformatter"}
+
+	d, err := zeroformatter.Serialize(h)
+	if err != nil {
+		log.Fatal(err)
+	}
+	r := Struct{}
+	err = zeroformatter.Deserialize(&r, d)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+```
 
 ## Supported type 
 
