@@ -432,9 +432,14 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 
 	case reflect.Map:
 		// length
-		d.write_s4_i(rv.Len(), offset)
+		l := rv.Len()
+		d.write_s4_i(l, offset)
 		size += byte4
 		offset += byte4
+
+		if l < 1 {
+			return size, nil
+		}
 
 		keys := d.queueMapKey[0]
 		keysLen := len(keys)
