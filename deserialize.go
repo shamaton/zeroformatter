@@ -17,11 +17,25 @@ type deserializer struct {
 	data []byte
 }
 
+type delayDeserializer struct {
+	*deserializer
+	holder       reflect.Value
+	processedMap map[uintptr]int
+}
+
 const minStructDataSize = 9
 
 func createDeserializer(data []byte) *deserializer {
 	return &deserializer{
 		data: data,
+	}
+}
+
+func createDelayDeserialize(data []byte, holder reflect.Value) *delayDeserializer {
+	return &delayDeserializer{
+		deserializer: createDeserializer(data),
+		holder:       holder,
+		processedMap: map[uintptr]int{},
 	}
 }
 
@@ -46,6 +60,84 @@ func Deserialize(holder interface{}, data []byte) error {
 	// byte to primitive
 	_, err := ds.deserialize(t, 0)
 	return err
+}
+
+func DelayDeserialize(holder interface{}, data []byte) (*delayDeserializer, error) {
+
+	t := reflect.ValueOf(holder)
+	if t.Kind() != reflect.Ptr {
+		return nil, fmt.Errorf("holder must set pointer value. but got: %t", holder)
+	}
+
+	t = t.Elem()
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	fmt.Println("eelele  ", t.CanSet())
+
+	ds := createDelayDeserialize(data, t)
+
+	// size check
+	offset := uint32(0)
+	b, offset := ds.read_s4(offset)
+
+	dataLen := len(ds.data)
+	size := binary.LittleEndian.Uint32(b)
+	if size != uint32(dataLen) {
+		return nil, fmt.Errorf("data size is wrong [ %d : %d ]", size, dataLen)
+	}
+
+	if t.Kind() == reflect.Struct && !isDateTime(t) && !isDateTimeOffset(t) {
+		// make deserialized map
+		for i := 0; i < t.NumField(); i++ {
+			e := t.Field(i)
+			ds.processedMap[e.Addr().Pointer()] = i
+		}
+	} else {
+		return nil, fmt.Errorf("only defined struct can delay deserialize: %t", holder)
+	}
+
+	return ds, nil
+}
+
+func (d *delayDeserializer) DeserializeByElement(elem interface{}) error {
+
+	t := reflect.ValueOf(elem)
+	if t.Kind() != reflect.Ptr {
+		return fmt.Errorf("element must set pointer value. but got: %t", elem)
+	}
+
+	t = t.Elem()
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+
+	index, ok := d.processedMap[t.Addr().Pointer()]
+	if !ok {
+		fmt.Errorf("not found element: %t", elem)
+	}
+
+	// already deserialize
+	if index < 0 {
+		return nil
+	}
+
+	tt := d.holder
+
+	fmt.Println("testes ---> ", tt.Kind(), tt.CanSet())
+
+	// value
+	rv := tt.Field(index)
+	// offset
+	off := 8 + uint32(index)*byte4
+	b, _ := d.read_s4(off)
+	dataIndex := binary.LittleEndian.Uint32(b)
+
+	fmt.Println("testes ---> ", index, rv.Kind(), rv.CanSet(), d.data)
+
+	//
+	d.deserialize(rv, dataIndex)
+	return nil
 }
 
 func (d *deserializer) deserializeStruct(t reflect.Value) error {
