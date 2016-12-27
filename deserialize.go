@@ -299,15 +299,14 @@ func (d *deserializer) deserialize(rv reflect.Value, offset uint32) (uint32, err
 		e := rv.Type().Elem()
 
 		// length
-		b, offset := d.read_s4(offset)
+		b, o := d.read_s4(offset)
 		l := int(int32(binary.LittleEndian.Uint32(b)))
 
 		// data is null
 		if l < 0 {
-			return offset, nil
+			return o, nil
 		}
 
-		o := offset
 		tmpSlice := reflect.MakeSlice(rv.Type(), l, l)
 
 		for i := 0; i < l; i++ {
@@ -329,18 +328,17 @@ func (d *deserializer) deserialize(rv reflect.Value, offset uint32) (uint32, err
 		e := rv.Type().Elem()
 
 		// length
-		b, offset := d.read_s4(offset)
+		b, o := d.read_s4(offset)
 		l := int(int32(binary.LittleEndian.Uint32(b)))
 
 		// data is null
 		if l < 0 {
-			return offset, nil
+			return o, nil
 		}
 		if l != rv.Len() {
 			return 0, fmt.Errorf("Array Length is different : data[%d] array[%d]", l, rv.Len())
 		}
 
-		o := offset
 		for i := 0; i < l; i++ {
 			v := reflect.New(e).Elem()
 			o, err = d.deserialize(v, o)
@@ -362,13 +360,13 @@ func (d *deserializer) deserialize(rv reflect.Value, offset uint32) (uint32, err
 		}
 
 		// map length
-		b, offset := d.read_s4(offset)
+		b, o := d.read_s4(offset)
 		l := int(binary.LittleEndian.Uint32(b))
 
 		for i := 0; i < l; i++ {
 			k := reflect.New(key).Elem()
 			v := reflect.New(value).Elem()
-			o, err := d.deserialize(k, offset)
+			o, err = d.deserialize(k, o)
 			if err != nil {
 				return 0, err
 			}
