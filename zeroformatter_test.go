@@ -1,328 +1,616 @@
 package zeroformatter
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
-	"unsafe"
 
 	"github.com/shamaton/zeroformatter/char"
+	"github.com/shamaton/zeroformatter/datetimeoffset"
 )
 
-func TestZeroformatter(t *testing.T) {
-	f := func(in interface{}, out interface{}, isDispByte bool) error {
-		d, err := Serialize(in)
-		if err != nil {
-			return err
-		}
-		if isDispByte {
-			t.Log(in, " -- to byte --> ", d)
-		}
-		if err := Deserialize(out, d); err != nil {
-			return err
-		}
-		return nil
-	}
-	_p := func(in interface{}, out interface{}) string {
-		return fmt.Sprint("value different [in]:", in, " [out]:", out)
-	}
-
+func TestPrimitiveInt(t *testing.T) {
 	var rInt8 int8
 	vInt8 := int8(-8)
-	if err := f(vInt8, &rInt8, false); err != nil {
+	if err := checkRoutine(t, vInt8, &rInt8, false); err != nil {
 		t.Error(err)
 	}
-	if vInt8 != rInt8 {
-		t.Error(_p(vInt8, rInt8))
-	}
-	t.Log(rInt8)
 
 	var rInt16 int16
 	vInt16 := int16(-16)
-	if err := f(vInt16, &rInt16, false); err != nil {
+	if err := checkRoutine(t, vInt16, &rInt16, false); err != nil {
 		t.Error(err)
-	}
-	if vInt16 != rInt16 {
-		t.Error(_p(vInt16, rInt16))
 	}
 
 	var rInt int
 	vInt := -65535
-	if err := f(vInt, &rInt, false); err != nil {
+	if err := checkRoutine(t, vInt, &rInt, false); err != nil {
 		t.Error(err)
-	}
-	if vInt != rInt {
-		t.Error(_p(vInt, rInt))
 	}
 
 	var rInt32 int32
 	vInt32 := int32(-32)
-	if err := f(vInt32, &rInt32, false); err != nil {
+	if err := checkRoutine(t, vInt32, &rInt32, false); err != nil {
 		t.Error(err)
-	}
-	if vInt32 != rInt32 {
-		t.Error(_p(vInt32, rInt32))
 	}
 
 	var rInt64 int64
 	vInt64 := int64(-64)
-	if err := f(vInt64, &rInt64, false); err != nil {
+	if err := checkRoutine(t, vInt64, &rInt64, false); err != nil {
 		t.Error(err)
 	}
-	if vInt64 != rInt64 {
-		t.Error(_p(vInt64, rInt64))
-	}
-	t.Log(rInt64)
 
+	// pointer
+	pvInt8 := new(int8)
+	prInt8 := new(int8)
+	*pvInt8 = math.MaxInt8
+	if err := checkRoutine(t, pvInt8, prInt8, false); err != nil {
+		t.Error(err)
+	}
+	if err := checkRoutine(t, &pvInt8, &prInt8, false); err != nil {
+		t.Error(err)
+	}
+
+	pvInt16 := new(int16)
+	prInt16 := new(int16)
+	*pvInt16 = math.MaxInt16
+	if err := checkRoutine(t, pvInt16, prInt16, false); err != nil {
+		t.Error(err)
+	}
+	if err := checkRoutine(t, &pvInt16, &prInt16, false); err != nil {
+		t.Error(err)
+	}
+
+	pvInt := new(int)
+	prInt := new(int)
+	*pvInt = math.MaxInt32
+	if err := checkRoutine(t, pvInt, prInt, false); err != nil {
+		t.Error(err)
+	}
+	if err := checkRoutine(t, &pvInt, &prInt, false); err != nil {
+		t.Error(err)
+	}
+
+	pvInt32 := new(int32)
+	prInt32 := new(int32)
+	*pvInt32 = math.MaxInt32
+	if err := checkRoutine(t, pvInt32, prInt32, false); err != nil {
+		t.Error(err)
+	}
+	if err := checkRoutine(t, &pvInt32, &prInt32, false); err != nil {
+		t.Error(err)
+	}
+
+	pvInt64 := new(int64)
+	prInt64 := new(int64)
+	*pvInt64 = math.MaxInt64
+	if err := checkRoutine(t, pvInt64, prInt64, false); err != nil {
+		t.Error(err)
+	}
+	if err := checkRoutine(t, &pvInt64, &prInt64, false); err != nil {
+		t.Error(err)
+	}
+
+	// error
+	var rError int32
+	vError := int(-1)
+	if err := checkRoutine(t, vError, &rError, false); err != nil {
+		if strings.Contains(err.Error(), "value diffrent") {
+			t.Error(err)
+		}
+	}
+}
+
+func TestPrimitiveUint(t *testing.T) {
 	var rUint8 uint8
 	vUint8 := uint8(math.MaxUint8)
-	if err := f(vUint8, &rUint8, false); err != nil {
+	if err := checkRoutine(t, vUint8, &rUint8, false); err != nil {
 		t.Error(err)
 	}
-	if vUint8 != rUint8 {
-		t.Error(_p(vUint8, rUint8))
-	}
-	t.Log(rUint8)
 
 	var rUint16 uint16
 	vUint16 := uint16(math.MaxUint16)
-	if err := f(vUint16, &rUint16, false); err != nil {
+	if err := checkRoutine(t, vUint16, &rUint16, false); err != nil {
 		t.Error(err)
 	}
-	if vUint16 != rUint16 {
-		t.Error(_p(vUint16, rUint16))
-	}
-	t.Log(rUint16)
 
 	var rUint uint
 	vUint := uint(math.MaxUint32 / 2)
-	if err := f(vUint, &rUint, false); err != nil {
+	if err := checkRoutine(t, vUint, &rUint, false); err != nil {
 		t.Error(err)
 	}
-	if vUint != rUint {
-		t.Error(_p(vUint, rUint))
-	}
-	t.Log(rUint)
 
 	var rUint32 uint32
 	vUint32 := uint32(math.MaxUint32)
-	if err := f(vUint32, &rUint32, false); err != nil {
+	if err := checkRoutine(t, vUint32, &rUint32, false); err != nil {
 		t.Error(err)
 	}
-	if vUint32 != rUint32 {
-		t.Error(_p(vUint32, rUint32))
-	}
-	t.Log(rUint32)
 
 	var rUint64 uint64
 	vUint64 := uint64(math.MaxUint64)
-	if err := f(vUint64, &rUint64, false); err != nil {
+	if err := checkRoutine(t, vUint64, &rUint64, false); err != nil {
 		t.Error(err)
 	}
-	if vUint64 != rUint64 {
-		t.Error(_p(vUint64, rUint64))
+
+	// pointer
+	pvUint8 := new(uint8)
+	prUint8 := new(uint8)
+	*pvUint8 = math.MaxUint8
+	if err := checkRoutine(t, pvUint8, prUint8, false); err != nil {
+		t.Error(err)
 	}
-	t.Log(rUint64)
+	if err := checkRoutine(t, &pvUint8, &prUint8, false); err != nil {
+		t.Error(err)
+	}
+
+	pvUint16 := new(uint16)
+	prUint16 := new(uint16)
+	*pvUint16 = math.MaxUint16
+	if err := checkRoutine(t, pvUint16, prUint16, false); err != nil {
+		t.Error(err)
+	}
+	if err := checkRoutine(t, &pvUint16, &prUint16, false); err != nil {
+		t.Error(err)
+	}
+
+	pvUint := new(uint)
+	prUint := new(uint)
+	*pvUint = math.MaxUint32
+	if err := checkRoutine(t, pvUint, prUint, false); err != nil {
+		t.Error(err)
+	}
+	if err := checkRoutine(t, &pvUint, &prUint, false); err != nil {
+		t.Error(err)
+	}
+
+	pvUint32 := new(uint32)
+	prUint32 := new(uint32)
+	*pvUint32 = math.MaxUint32
+	if err := checkRoutine(t, pvUint32, prUint32, false); err != nil {
+		t.Error(err)
+	}
+	if err := checkRoutine(t, &pvUint32, &prUint32, false); err != nil {
+		t.Error(err)
+	}
+
+	pvUint64 := new(uint64)
+	prUint64 := new(uint64)
+	*pvUint64 = math.MaxUint64
+	if err := checkRoutine(t, pvUint64, prUint64, false); err != nil {
+		t.Error(err)
+	}
+	if err := checkRoutine(t, &pvUint64, &prUint64, false); err != nil {
+		t.Error(err)
+	}
+
+	var rError uint32
+	vError := uint(1)
+	if err := checkRoutine(t, vError, &rError, false); err != nil {
+		if strings.Contains(err.Error(), "value diffrent") {
+			t.Error(err)
+		}
+	}
+}
+
+func TestPrimitiveFloat(t *testing.T) {
 
 	var rFloat32 float32
 	vFloat32 := float32(math.MaxFloat32)
-	if err := f(vFloat32, &rFloat32, false); err != nil {
+	if err := checkRoutine(t, vFloat32, &rFloat32, false); err != nil {
 		t.Error(err)
 	}
-	if vFloat32 != rFloat32 {
-		t.Error(_p(vFloat32, rFloat32))
-	}
-	t.Log(rFloat32)
 
 	var rFloat64 float64
-	vFloat64 := float64(math.MaxFloat64)
-	if err := f(vFloat64, &rFloat64, false); err != nil {
+	vFloat64 := math.MaxFloat64
+	if err := checkRoutine(t, vFloat64, &rFloat64, false); err != nil {
 		t.Error(err)
 	}
-	if vFloat64 != rFloat64 {
-		t.Error(_p(vFloat64, rFloat64))
-	}
-	t.Log(rFloat64)
 
+	// pointer
+	pvFloat32 := new(float32)
+	prFloat32 := new(float32)
+	*pvFloat32 = math.MaxFloat32 / 2
+	if err := checkRoutine(t, pvFloat32, prFloat32, false); err != nil {
+		t.Error(err)
+	}
+	if err := checkRoutine(t, &pvFloat32, &prFloat32, false); err != nil {
+		t.Error(err)
+	}
+
+	pvFloat64 := new(float64)
+	prFloat64 := new(float64)
+	*pvFloat64 = math.MaxFloat64 / 2
+	if err := checkRoutine(t, pvFloat64, prFloat64, false); err != nil {
+		t.Error(err)
+	}
+	if err := checkRoutine(t, &pvFloat64, &prFloat64, false); err != nil {
+		t.Error(err)
+	}
+
+	// error
+	var rError float32
+	vError := float64(1)
+	if err := checkRoutine(t, vError, &rError, false); err != nil {
+		if strings.Contains(err.Error(), "value diffrent") {
+			t.Error(err)
+		}
+	}
+}
+
+func TestPrimitiveBool(t *testing.T) {
 	var rBool bool
 	vBool := true
-	if err := f(vBool, &rBool, false); err != nil {
+	if err := checkRoutine(t, vBool, &rBool, false); err != nil {
 		t.Error(err)
 	}
-	if vBool != rBool {
-		t.Error(_p(vBool, rBool))
+
+	pvBool := new(bool)
+	prBool := new(bool)
+	*pvBool = true
+	if err := checkRoutine(t, pvBool, prBool, false); err != nil {
+		t.Error(err)
 	}
-	t.Log(rBool)
+	if err := checkRoutine(t, &pvBool, &prBool, false); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestPrimitiveString(t *testing.T) {
 
 	var rChar char.Char
 	vChar := char.Char('Z')
-	if err := f(vChar, &rChar, false); err != nil {
+	if err := checkRoutine(t, vChar, &rChar, false); err != nil {
 		t.Error(err)
 	}
-	if vChar != rChar {
-		t.Error(_p(vChar, rChar))
-	}
-	t.Logf("%#U", rChar)
+	//t.Logf("%#U", rChar)
 
 	var rString string
 	vString := "this string serialize and deserialize."
-	if err := f(vString, &rString, false); err != nil {
+	if err := checkRoutine(t, vString, &rString, false); err != nil {
 		t.Error(err)
 	}
-	if vString != rString {
-		t.Error(_p(vString, rString))
+
+	// pointer
+	pvChar := new(char.Char)
+	prChar := new(char.Char)
+	*pvChar = char.Char('Y')
+	if err := checkRoutine(t, pvChar, prChar, false); err != nil {
+		t.Error(err)
 	}
-	t.Log(rString)
+	if err := checkRoutine(t, &pvChar, &prChar, false); err != nil {
+		t.Error(err)
+	}
+	//t.Logf("%#U", *prChar)
+
+	pvString := new(string)
+	prString := new(string)
+	*pvString = "this string is pointer value"
+	if err := checkRoutine(t, pvString, prString, false); err != nil {
+		t.Error(err)
+	}
+	if err := checkRoutine(t, &pvString, &prString, false); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestPrimitiveTime(t *testing.T) {
 
 	var rTime time.Time
 	vTime := time.Now()
-	if err := f(vTime, &rTime, false); err != nil {
+	if err := checkRoutine(t, vTime, &rTime, false); err != nil {
 		t.Error(err)
 	}
-	if vTime != rTime {
-		t.Error(_p(vTime, rTime))
-	}
-	t.Log(rTime)
 
 	var rDuration time.Duration
 	vDuration := time.Duration(12*time.Hour + 34*time.Minute + 56*time.Second + 78*time.Nanosecond)
-	if err := f(vDuration, &rDuration, false); err != nil {
+	if err := checkRoutine(t, vDuration, &rDuration, false); err != nil {
 		t.Error(err)
 	}
-	if vDuration != rDuration {
-		t.Error(_p(vDuration, rDuration))
-	}
-	t.Log(rDuration)
 
-	// todo : more array/slice test cases
-	var rIntArr []int
-	vIntArr := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, math.MinInt32}
-	if err := f(vIntArr, &rIntArr, false); err != nil {
+	var rOffset datetimeoffset.DateTimeOffset
+	vOffset := datetimeoffset.Now()
+	if err := checkRoutine(t, vOffset, &rOffset, false); err != nil {
 		t.Error(err)
 	}
-	if !reflect.DeepEqual(vIntArr, rIntArr) {
-		t.Error(_p(vIntArr, rIntArr))
-	}
-	t.Log(rIntArr)
 
-	var rStrArr []string
-	vStrArr := []string{"this", "is", "string", "array", ".", "can", "you", "see", "?"}
-	if err := f(vStrArr, &rStrArr, false); err != nil {
+	// pointer
+	pvTime := new(time.Time)
+	prTime := new(time.Time)
+	*pvTime = time.Now()
+	if err := checkRoutine(t, pvTime, prTime, false); err != nil {
 		t.Error(err)
 	}
-	if !reflect.DeepEqual(vStrArr, rStrArr) {
-		t.Error(_p(vStrArr, rStrArr))
-	}
-	t.Log(rStrArr)
-
-	var rArrEmpty []string
-	vArrEmpty := []string{}
-	if err := f(vArrEmpty, &rArrEmpty, false); err != nil {
+	if err := checkRoutine(t, &pvTime, &prTime, false); err != nil {
 		t.Error(err)
 	}
-	if !reflect.DeepEqual(vArrEmpty, rArrEmpty) {
-		t.Error(_p(vArrEmpty, rArrEmpty))
-	}
-	t.Log(rArrEmpty)
 
-	/*
-		var _rUint8 int8
-		_vUint8 := int8(-8)
-		if err := f(_vUint8, &_rUint8, false); err != nil {
+	pvDuration := new(time.Duration)
+	prDuration := new(time.Duration)
+	*pvDuration = time.Duration(987654321 * time.Nanosecond)
+	if err := checkRoutine(t, pvDuration, prDuration, false); err != nil {
+		t.Error(err)
+	}
+	if err := checkRoutine(t, &pvDuration, &prDuration, false); err != nil {
+		t.Error(err)
+	}
+
+	pvOffset := new(datetimeoffset.DateTimeOffset)
+	prOffset := new(datetimeoffset.DateTimeOffset)
+	*pvOffset = datetimeoffset.Now()
+	if err := checkRoutine(t, pvOffset, prOffset, false); err != nil {
+		t.Error(err)
+	}
+	if err := checkRoutine(t, &pvOffset, &prOffset, false); err != nil {
+		t.Error(err)
+	}
+
+	// error
+	var rError time.Time
+	vError := datetimeoffset.Now()
+	if err := checkRoutine(t, vError, &rError, false); err != nil {
+		if strings.Contains(err.Error(), "value diffrent") {
 			t.Error(err)
 		}
-		if _vUint8 != _rUint8 {
-			t.Error(_p(_vUint8, _rUint8))
-		}
-		t.Log(_rUint8)
-	*/
-	type childchild struct {
-		String string
-		Floats []float32
+	}
+}
+
+func TestArray(t *testing.T) {
+
+	var rIntA [10]int
+	vIntA := [10]int{1, 2, 3, 4, 5, 6, 7, 8, 9, math.MinInt32}
+	if err := checkRoutine(t, vIntA, &rIntA, false); err != nil {
+		t.Error(err)
+	}
+
+	var rIntS []int
+	vIntS := []int{math.MinInt32, 9, 8, 7, 6, 5, 4, 3, 2, 1}
+	if err := checkRoutine(t, vIntS, &rIntS, false); err != nil {
+		t.Error(err)
+	}
+
+	var rUintA [10]uint
+	vUintA := [10]uint{1, 2, 3, 4, 5, 6, 7, 8, 9, math.MaxUint32}
+	if err := checkRoutine(t, vUintA, &rUintA, false); err != nil {
+		t.Error(err)
+	}
+
+	var rUintS []uint
+	vUintS := []uint{math.MaxUint32, 9, 8, 7, 6, 5, 4, 3, 2, 1}
+	if err := checkRoutine(t, vUintS, &rUintS, false); err != nil {
+		t.Error(err)
+	}
+
+	var rFloatA [5]float64
+	vFloatA := [5]float64{1.2, 3.4, 5.6, 7.8, math.MaxFloat64}
+	if err := checkRoutine(t, vFloatA, &rFloatA, false); err != nil {
+		t.Error(err)
+	}
+
+	var rFloatS []float64
+	vFloatS := []float64{math.MaxFloat64, 9.8, 7.6, 5.4, 3.2}
+	if err := checkRoutine(t, vFloatS, &rFloatS, false); err != nil {
+		t.Error(err)
+	}
+
+	var rBoolA [5]bool
+	vBoolA := [5]bool{true, false, true, false, true}
+	if err := checkRoutine(t, vBoolA, &rBoolA, false); err != nil {
+		t.Error(err)
+	}
+
+	var rBoolS []bool
+	vBoolS := []bool{false, true, false, true, false}
+	if err := checkRoutine(t, vBoolS, &rBoolS, false); err != nil {
+		t.Error(err)
+	}
+
+	var rStrA []string
+	vStrA := []string{"this", "is", "string", "array", ".", "can", "you", "see", "?"}
+	if err := checkRoutine(t, vStrA, &rStrA, false); err != nil {
+		t.Error(err)
+	}
+
+	var rStrS []string
+	vStrS := []string{"this", "is", "string", "slice", ".", "can", "you", "see", "?"}
+	if err := checkRoutine(t, vStrS, &rStrS, false); err != nil {
+		t.Error(err)
+	}
+
+	var rEmptyA [0]string
+	vEmptyA := [0]string{}
+	if err := checkRoutine(t, vEmptyA, &rEmptyA, false); err != nil {
+		t.Error(err)
+	}
+
+	var rEmptyS []string
+	vEmptyS := []string{}
+	if err := checkRoutine(t, vEmptyS, &rEmptyS, false); err != nil {
+		t.Error(err)
+	}
+
+	var rCharA [3]char.Char
+	vCharA := [3]char.Char{'A', 'B', 'C'}
+	if err := checkRoutine(t, vCharA, &rCharA, false); err != nil {
+		t.Error(err)
+	}
+
+	var rCharS []char.Char
+	vCharS := []char.Char{'C', 'B', 'A'}
+	if err := checkRoutine(t, vCharS, &rCharS, false); err != nil {
+		t.Error(err)
+	}
+
+	var rOffsetA [3]datetimeoffset.DateTimeOffset
+	vOffsetA := [3]datetimeoffset.DateTimeOffset{datetimeoffset.Now(), datetimeoffset.Now(), datetimeoffset.Now()}
+	if err := checkRoutine(t, vOffsetA, &rOffsetA, false); err != nil {
+		t.Error(err)
+	}
+
+	var rOffsetS []datetimeoffset.DateTimeOffset
+	vOffsetS := []datetimeoffset.DateTimeOffset{datetimeoffset.Now(), datetimeoffset.Now(), datetimeoffset.Now()}
+	if err := checkRoutine(t, vOffsetS, &rOffsetS, false); err != nil {
+		t.Error(err)
+	}
+
+	// pointer
+	pvStrS := new([]string)
+	prStrS := new([]string)
+	*pvStrS = []string{"this", "is", "pointer", "string", "slice", ".", "can", "you", "see", "?"}
+	if err := checkRoutine(t, pvStrS, prStrS, false); err != nil {
+		t.Error(err)
+	}
+	if err := checkRoutine(t, &pvStrS, &prStrS, false); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestStruct(t *testing.T) {
+	type child3 struct {
+		Int int
+	}
+	type child2 struct {
+		Int2Uint        map[int]uint
+		Float2Bool      map[float32]bool
+		Char2String     map[char.Char]string
+		Time2TimeOffset map[time.Time]datetimeoffset.DateTimeOffset
+		Duration2Struct map[time.Duration]child3
 	}
 	type child struct {
-		Int   int
-		Time  time.Time
-		Child childchild
+		IntArray        []int
+		UintArray       []uint
+		FloatArray      []float32
+		BoolArray       []bool
+		CharArray       []char.Char
+		StringArray     []string
+		TimeArray       []time.Time
+		TimeOffsetArray []datetimeoffset.DateTimeOffset
+		DurationArray   []time.Duration
+		Child           child2
 	}
 	type st struct {
-		Int16  int16
-		Int    int
-		Int64  int64
-		Uint16 uint16
-		Uint   uint
-		Uint64 uint64
-		Float  float32
-		Double float64
-		Bool   bool
-		Uint8  byte
-		Int8   int8
-		String string
-		Time   time.Time
-		Child  child
+		Int8       int8
+		Int16      int16
+		Int32      int32
+		Int64      int64
+		Uint8      byte
+		Uint16     uint16
+		Uint32     uint32
+		Uint64     uint64
+		Float      float32
+		Double     float64
+		Bool       bool
+		Char       char.Char
+		String     string
+		Time       time.Time
+		Duration   time.Duration
+		TimeOffset datetimeoffset.DateTimeOffset
+		Child      child
 	}
 	vSt := &st{
-		Int:    -32,
-		Int8:   -8,
-		Int16:  -16,
-		Int64:  -64,
-		Uint:   32,
-		Uint8:  8,
-		Uint16: 16,
-		Uint64: 64,
-		Float:  1.23,
-		Double: 2.3456,
-		Bool:   true,
-		String: "hello",
-		Time:   time.Now(),
+		Int32:      -32,
+		Int8:       -8,
+		Int16:      -16,
+		Int64:      -64,
+		Uint32:     32,
+		Uint8:      8,
+		Uint16:     16,
+		Uint64:     64,
+		Float:      1.23,
+		Double:     2.3456,
+		Bool:       true,
+		Char:       char.Char('A'),
+		String:     "Parent",
+		Time:       time.Now(),
+		Duration:   time.Duration(123 * time.Second),
+		TimeOffset: datetimeoffset.Now(),
+
+		// child
 		Child: child{
-			Int:   1234567,
-			Time:  time.Now(),
-			Child: childchild{String: "this is child in child", Floats: []float32{1.2, 3.4, 5.6}},
+			IntArray:        []int{-1, -2, -3, -4, -5},
+			UintArray:       []uint{1, 2, 3, 4, 5},
+			FloatArray:      []float32{-1.2, -3.4, -5.6, -7.8},
+			BoolArray:       []bool{true, true, false, false, true},
+			CharArray:       []char.Char{char.Char('X'), char.Char('Y'), char.Char('Z')},
+			StringArray:     []string{"str", "ing", "arr", "ay"},
+			TimeArray:       []time.Time{time.Now(), time.Now(), time.Now()},
+			TimeOffsetArray: []datetimeoffset.DateTimeOffset{datetimeoffset.Now(), datetimeoffset.Now(), datetimeoffset.Now()},
+			DurationArray:   []time.Duration{time.Duration(1 * time.Nanosecond), time.Duration(2 * time.Nanosecond)},
+
+			// childchild
+			Child: child2{
+				Int2Uint:        map[int]uint{-1: 2, -3: 4},
+				Float2Bool:      map[float32]bool{-1.1: true, -2.2: false},
+				Char2String:     map[char.Char]string{char.Char('A'): "AA", char.Char('B'): "BB"},
+				Time2TimeOffset: map[time.Time]datetimeoffset.DateTimeOffset{time.Now(): datetimeoffset.Now(), time.Now(): datetimeoffset.Now()},
+				Duration2Struct: map[time.Duration]child3{time.Duration(1 * time.Hour): child3{Int: 1}, time.Duration(2 * time.Hour): child3{Int: 2}},
+			},
 		},
 	}
 	rSt := st{}
-	if err := f(vSt, &rSt, false); err != nil {
+	if err := checkRoutine(t, vSt, &rSt, false); err != nil {
 		t.Error(err)
-	}
-	if !reflect.DeepEqual(*vSt, rSt) {
-		t.Error(_p(*vSt, rSt))
 	}
 
-	rMapInt := map[int]int{1: 2, 3: 4, math.MaxInt32: math.MinInt32}
-	vMapInt := map[int]int{}
-	if err := f(rMapInt, &vMapInt, false); err != nil {
+	// pointer
+	prSt := new(st)
+	if err := checkRoutine(t, &vSt, &prSt, false); err != nil {
 		t.Error(err)
 	}
-	if !reflect.DeepEqual(rMapInt, vMapInt) {
-		t.Error(_p(rMapInt, vMapInt))
+}
+
+func TestMap(t *testing.T) {
+	rMapInt := map[int]int{1: 2, 3: 4, math.MaxInt32: math.MinInt32}
+	vMapInt := map[int]int{}
+	if err := checkRoutine(t, rMapInt, &vMapInt, false); err != nil {
+		t.Error(err)
 	}
-	t.Log(vMapInt)
 
 	rMapStr := map[string]float32{"this": 1.2, "is": 3.4, "float map": 56.789}
 	vMapStr := map[string]float32{}
-	if err := f(rMapStr, &vMapStr, false); err != nil {
+	if err := checkRoutine(t, rMapStr, &vMapStr, false); err != nil {
 		t.Error(err)
 	}
-	if !reflect.DeepEqual(rMapStr, vMapStr) {
-		t.Error(_p(rMapStr, vMapStr))
+}
+
+// for test
+func checkRoutine(t *testing.T, in interface{}, out interface{}, isDebug bool) error {
+	d, err := Serialize(in)
+	if err != nil {
+		return err
 	}
-	t.Log(vMapStr)
 
-	t.Log(rSt)
-	t.Log("stst ", unsafe.Sizeof(*vSt), " : ", unsafe.Sizeof(rSt))
-
-	// pointer test mmmm...
-	hoge := new(int)
-	*hoge = 123
-	fuga := new(int)
-	rrrr := reflect.ValueOf(&fuga)
-	t.Log(rrrr.Type().Elem())
-	if err := f(&hoge, &fuga, false); err != nil {
-		t.Error(err)
+	if isDebug {
+		t.Log(in, " -- to byte --> ", d)
 	}
-	t.Log(hoge, *hoge, fuga, *fuga)
 
+	if err := Deserialize(out, d); err != nil {
+		return err
+	}
+
+	i := getValue(in)
+	o := getValue(out)
+	if isDebug {
+		t.Log("value [in]:", i, " [out]:", o)
+	}
+
+	if !reflect.DeepEqual(i, o) {
+		return errors.New(fmt.Sprint("value different [in]:", in, " [out]:", out))
+	}
+	return nil
+}
+
+// for check value
+func getValue(v interface{}) interface{} {
+	rv := reflect.ValueOf(v)
+	if rv.Kind() == reflect.Ptr {
+		rv = rv.Elem()
+	}
+	if rv.Kind() == reflect.Ptr {
+		rv = rv.Elem()
+	}
+	return rv.Interface()
 }
