@@ -134,32 +134,6 @@ func (d *delayDeserializer) deserializeByElement(element interface{}) error {
 	// address
 	address := t.Addr().Pointer()
 	return d.deserializeByAddress(address)
-
-	/*
-		index, ok := d.processedMap[address]
-		if !ok {
-			return fmt.Errorf("not found element: %t", element)
-		}
-
-		// already deserialized
-		if index < 0 {
-			return nil
-		}
-
-		// value
-		rv := d.holder.Field(index)
-		// offset
-		off := 8 + uint32(index)*byte4
-		b, _ := d.read_s4(off)
-		dataIndex := binary.LittleEndian.Uint32(b)
-
-		fmt.Println("testes ---> ", index, rv.Kind(), rv.CanSet(), d.data)
-
-		// deserialize and update flag
-		d.deserialize(rv, dataIndex)
-		d.processedMap[address] = -1
-		return nil
-	*/
 }
 
 func (d *delayDeserializer) deserializeByAddress(address uintptr) error {
@@ -179,8 +153,6 @@ func (d *delayDeserializer) deserializeByAddress(address uintptr) error {
 	off := 8 + uint32(index)*byte4
 	b, _ := d.read_s4(off)
 	dataIndex := binary.LittleEndian.Uint32(b)
-
-	fmt.Println("testes ---> ", index, rv.Kind(), rv.CanSet(), d.data)
 
 	// deserialize and update flag
 	d.deserialize(rv, dataIndex)
