@@ -98,45 +98,71 @@ func TestDelayDeserialize(t *testing.T) {
 		t.Error(err)
 	}
 
-	holder := &st{}
-	dds, err := DelayDeserialize(holder, b)
+	eHolder := &st{}
+	dds, err := DelayDeserialize(eHolder, b)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// simple
-	if err := dds.DeserializeByElement(&holder.Int8); err != nil {
+	if err := dds.DeserializeByElement(&eHolder.Int8); err != nil {
 		t.Error(err)
 	}
-	if err := dds.DeserializeByElement(&holder.Uint8); err != nil {
+	if err := dds.DeserializeByElement(&eHolder.Uint8); err != nil {
 		t.Error(err)
 	}
-	if err := dds.DeserializeByElement(&holder.Float); err != nil {
+	if err := dds.DeserializeByElement(&eHolder.Float); err != nil {
 		t.Error(err)
 	}
-	if err := dds.DeserializeByElement(&holder.Char); err != nil {
+	if err := dds.DeserializeByElement(&eHolder.Char); err != nil {
 		t.Error(err)
 	}
-	if err := dds.DeserializeByElement(&holder.Time); err != nil {
+	if err := dds.DeserializeByElement(&eHolder.Time); err != nil {
 		t.Error(err)
 	}
 
+	if _bool, err := dds.IsDeserialized(&eHolder.Int16); err != nil || _bool {
+		t.Error("deserialized error")
+	}
+
 	// multiple
-	if err := dds.DeserializeByElement(&holder.Int16, &holder.Int32, &holder.Int64); err != nil {
+	if err := dds.DeserializeByElement(&eHolder.Int16, &eHolder.Int32, &eHolder.Int64); err != nil {
 		t.Error(err)
 	}
-	if err := dds.DeserializeByElement(&holder.Uint16, &holder.Uint32, &holder.Uint64); err != nil {
+	if err := dds.DeserializeByElement(&eHolder.Uint16, &eHolder.Uint32, &eHolder.Uint64); err != nil {
 		t.Error(err)
 	}
-	if err := dds.DeserializeByElement(&holder.Double, &holder.String, &holder.Bool); err != nil {
+	if err := dds.DeserializeByElement(&eHolder.Double, &eHolder.String, &eHolder.Bool); err != nil {
 		t.Error(err)
 	}
-	if err := dds.DeserializeByElement(&holder.Duration, &holder.TimeOffset, &holder.Child); err != nil {
+	if err := dds.DeserializeByElement(&eHolder.Duration, &eHolder.TimeOffset, &eHolder.Child); err != nil {
+		t.Error(err)
+	}
+
+	if _bool, err := dds.IsDeserialized(&eHolder.Int16); err != nil || !_bool {
+		t.Error("deserialized error")
+	}
+
+	// value equal ?
+	if !reflect.DeepEqual(vSt, eHolder) {
+		t.Error("value not equal!!")
+	}
+
+	iHolder := &st{}
+
+	dds, err = DelayDeserialize(iHolder, b)
+	if err != nil {
+		t.Error(err)
+	}
+	if err := dds.DeserializeByIndex(0); err != nil {
+		t.Error(err)
+	}
+	if err := dds.DeserializeByIndex(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16); err != nil {
 		t.Error(err)
 	}
 
 	// value equal ?
-	if !reflect.DeepEqual(vSt, holder) {
+	if !reflect.DeepEqual(vSt, iHolder) {
 		t.Error("value not equal!!")
 	}
 }
