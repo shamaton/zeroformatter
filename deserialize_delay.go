@@ -2,7 +2,6 @@ package zeroformatter
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"reflect"
 )
@@ -97,7 +96,7 @@ func (d *delayDeserializer) DeserializeByIndex(i int, indexes ...int) error {
 
 func (d *delayDeserializer) deserializeByIndex(i int) error {
 	if i >= len(d.indexArray) {
-		return errors.New("error text")
+		return fmt.Errorf("this index is out of range : %d", i)
 	}
 
 	addr := d.indexArray[i]

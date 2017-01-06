@@ -161,6 +161,10 @@ func TestDelayDeserialize(t *testing.T) {
 		t.Error(err)
 	}
 
+	if err := dds.deserializeByIndex(17); err == nil {
+		t.Error("index error")
+	}
+
 	// value equal ?
 	if !reflect.DeepEqual(vSt, iHolder) {
 		t.Error("value not equal!!")
