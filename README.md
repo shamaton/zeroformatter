@@ -15,7 +15,10 @@ go get github.com/shamaton/zeroformatter
 ```go
 package main;
 
-import "github.com/shamaton/zeroformatter"
+import (
+  "github.com/shamaton/zeroformatter"
+  "log"
+)
 
 func main() {
 	type Struct struct {
@@ -31,6 +34,35 @@ func main() {
 	err = zeroformatter.Deserialize(&r, d)
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+```
+
+#### delay
+```go
+package main;
+
+import (
+  "github.com/shamaton/zeroformatter"
+  "log"
+)
+
+func how_to_use(b []byte) {
+	type Struct struct {
+		String string
+	}
+	
+	r := Struct{}
+	dds, _ := zeroformatter.DelayDeserialize(&r, b)
+	
+	// by element
+	if err := dds.DeserializeByElement(&r.String); err != nil {
+		log.Fatal(err)
+	}
+	
+	// or by index
+	if err := dds.DeserializeByIndex(0); err != nil {
+	  log.Fatal(err)
 	}
 }
 ```
