@@ -50,7 +50,7 @@ func DelayDeserialize(holder interface{}, data []byte) (*delayDeserializer, erro
 
 	// check size
 	offset := uint32(0)
-	b, offset := ds.read_s4(offset)
+	b, offset := ds.readSize4(offset)
 
 	size := binary.LittleEndian.Uint32(b)
 	if size != uint32(dataLen) {
@@ -58,7 +58,7 @@ func DelayDeserialize(holder interface{}, data []byte) (*delayDeserializer, erro
 	}
 
 	// check index
-	b, offset = ds.read_s4(offset)
+	b, offset = ds.readSize4(offset)
 	dataIndex := binary.LittleEndian.Uint32(b)
 	numField := t.NumField()
 	if dataIndex != uint32(numField-1) {
@@ -150,7 +150,7 @@ func (d *delayDeserializer) deserializeByAddress(address uintptr) error {
 	rv := d.holder.Field(index)
 	// offset
 	off := 8 + uint32(index)*byte4
-	b, _ := d.read_s4(off)
+	b, _ := d.readSize4(off)
 	dataIndex := binary.LittleEndian.Uint32(b)
 
 	// deserialize and update flag
