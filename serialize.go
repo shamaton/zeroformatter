@@ -266,11 +266,11 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 
 	switch rv.Kind() {
 	case reflect.Int8:
-		d.write_s1_i64(rv.Int(), offset)
+		d.writeSize1Int64(rv.Int(), offset)
 		size += byte1
 
 	case reflect.Int16:
-		d.write_s2_i64(rv.Int(), offset)
+		d.writeSize2Int64(rv.Int(), offset)
 		size += byte2
 
 	case reflect.Int32:
@@ -283,12 +283,12 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 			d.create[offset+1] = byte(v >> 8)
 			size += byte2
 		} else {
-			d.write_s4_i64(rv.Int(), offset)
+			d.writeSize4Int64(rv.Int(), offset)
 			size += byte4
 		}
 
 	case reflect.Int:
-		d.write_s4_i64(rv.Int(), offset)
+		d.writeSize4Int64(rv.Int(), offset)
 		size += byte4
 
 	case reflect.Int64:
@@ -297,57 +297,57 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 			ns := rv.MethodByName("Nanoseconds").Call([]reflect.Value{})[0]
 			nanoseconds := ns.Int()
 			sec, nsec := nanoseconds/(1000*1000), int64(nanoseconds%(1000*1000))
-			d.write_s8_i64(sec, offset)
+			d.writeSize8Int64(sec, offset)
 			size += byte8
 			offset += byte8
 
 			// nanos
-			d.write_s4_i64(nsec, offset)
+			d.writeSize4Int64(nsec, offset)
 			size += byte4
 		} else {
-			d.write_s8_i64(rv.Int(), offset)
+			d.writeSize8Int64(rv.Int(), offset)
 			size += byte8
 		}
 
 	case reflect.Uint8:
-		d.write_s1_u64(rv.Uint(), offset)
+		d.writeSize1Uint64(rv.Uint(), offset)
 		size += byte1
 
 	case reflect.Uint16:
-		d.write_s2_u64(rv.Uint(), offset)
+		d.writeSize2Uint64(rv.Uint(), offset)
 		size += byte2
 
 	case reflect.Uint32, reflect.Uint:
-		d.write_s4_u64(rv.Uint(), offset)
+		d.writeSize4Uint64(rv.Uint(), offset)
 		size += byte4
 
 	case reflect.Uint64:
-		d.write_s8_u64(rv.Uint(), offset)
+		d.writeSize8Uint64(rv.Uint(), offset)
 		size += byte8
 
 	case reflect.Float32:
 		v := math.Float32bits(float32(rv.Float()))
-		d.write_s4_u32(v, offset)
+		d.writeSize4Uint32(v, offset)
 		size += byte4
 
 	case reflect.Float64:
 		v := math.Float64bits(rv.Float())
-		d.write_s8_u64(v, offset)
+		d.writeSize8Uint64(v, offset)
 		size += byte8
 
 	case reflect.Bool:
 
 		if rv.Bool() {
-			d.write_s1_u64(0x01, offset)
+			d.writeSize1Uint64(0x01, offset)
 		} else {
-			d.write_s1_u64(0x00, offset)
+			d.writeSize1Uint64(0x00, offset)
 		}
 		size += byte1
 
 	case reflect.String:
 		str := rv.String()
 		l := uint32(len(str))
-		d.write_s4_u32(l, offset)
+		d.writeSize4Uint32(l, offset)
 		size += byte4
 		offset += byte4
 
@@ -361,7 +361,7 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 	case reflect.Array, reflect.Slice:
 		l := rv.Len()
 		if l > 0 {
-			d.write_s4_i(l, offset)
+			d.writeSize4Int(l, offset)
 			size += byte4
 			offset += byte4
 
@@ -375,7 +375,7 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 			}
 		} else {
 			// only make length info
-			d.write_s4_i(0, offset)
+			d.writeSize4Int(0, offset)
 			size += byte4
 		}
 
@@ -395,29 +395,29 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 			nanos := rv.FieldByName("nsec").Int()
 
 			// seconds to byte
-			d.write_s8_i64(seconds, offset)
+			d.writeSize8Int64(seconds, offset)
 			size += byte8
 			offset += byte8
 
 			// nanos to byte
-			d.write_s4_i64(nanos, offset)
+			d.writeSize4Int64(nanos, offset)
 			size += byte4
 			offset += byte4
 
 			// offset to byte
-			d.write_s2_i64(offMin, offset)
+			d.writeSize2Int64(offMin, offset)
 			size += byte2
 		} else if isDateTime(rv) {
 			// seconds
 			unixTime := rv.MethodByName("Unix").Call([]reflect.Value{})
 			sec := unixTime[0].Int()
-			d.write_s8_i64(sec, offset)
+			d.writeSize8Int64(sec, offset)
 			size += byte8
 			offset += byte8
 
 			// nanos
 			nsec := rv.FieldByName("nsec").Int()
-			d.write_s4_i64(nsec, offset)
+			d.writeSize4Int64(nsec, offset)
 			size += byte4
 		} else {
 			for i := 0; i < rv.NumField(); i++ {
@@ -433,7 +433,7 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 	case reflect.Map:
 		// length
 		l := rv.Len()
-		d.write_s4_i(l, offset)
+		d.writeSize4Int(l, offset)
 		size += byte4
 		offset += byte4
 
