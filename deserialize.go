@@ -25,6 +25,7 @@ func createDeserializer(data []byte) *deserializer {
 	}
 }
 
+// Deserialize analyzes byte data and set into holder.
 func Deserialize(holder interface{}, data []byte) error {
 	ds := createDeserializer(data)
 
