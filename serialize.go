@@ -30,6 +30,7 @@ func createSerializer() *serializer {
 	}
 }
 
+// Serialize analyzes holder and converts to byte datas.
 func Serialize(holder interface{}) ([]byte, error) {
 	d := createSerializer()
 

@@ -22,6 +22,8 @@ func createDelayDeserialize(deserializer *deserializer, holder reflect.Value, nu
 	}
 }
 
+// DelayDeserialize can delay execution processes which analayze byte data and set into holder.
+// If you do not want to deserialize at once, please use this.
 func DelayDeserialize(holder interface{}, data []byte) (*delayDeserializer, error) {
 
 	t := reflect.ValueOf(holder)
@@ -138,7 +140,7 @@ func (d *delayDeserializer) deserializeByElement(element interface{}) error {
 func (d *delayDeserializer) deserializeByAddress(address uintptr) error {
 	index, ok := d.processedMap[address]
 	if !ok {
-		return fmt.Errorf("not found address: %t", address)
+		return fmt.Errorf("not found address: %v", address)
 	}
 
 	// already deserialized
