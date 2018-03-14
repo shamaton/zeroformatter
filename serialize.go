@@ -393,7 +393,8 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 			seconds := rets[0].Int() + offSec
 
 			// nanos
-			nanos := rv.FieldByName("nsec").Int()
+			rets = rv.MethodByName("Nanosecond").Call([]reflect.Value{})
+			nanos := rets[0].Int()
 
 			// seconds to byte
 			d.writeSize8Int64(seconds, offset)
@@ -417,7 +418,8 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 			offset += byte8
 
 			// nanos
-			nsec := rv.FieldByName("nsec").Int()
+			rets := rv.MethodByName("Nanosecond").Call([]reflect.Value{})
+			nsec := rets[0].Int()
 			d.writeSize4Int64(nsec, offset)
 			size += byte4
 		} else {
