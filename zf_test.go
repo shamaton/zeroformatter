@@ -1,4 +1,4 @@
-package zeroformatter
+package zeroformatter_test
 
 import (
 	"errors"
@@ -9,10 +9,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/shamaton/zeroformatter"
 	"github.com/shamaton/zeroformatter/char"
 	"github.com/shamaton/zeroformatter/datetimeoffset"
 )
 
+var now time.Time
+
+func init() {
+	n := time.Now()
+	now = time.Unix(n.Unix(), int64(n.Nanosecond()))
+}
 func TestPrimitiveInt(t *testing.T) {
 	var rInt8 int8
 	vInt8 := int8(-8)
@@ -300,7 +307,7 @@ func TestPrimitiveString(t *testing.T) {
 func TestPrimitiveTime(t *testing.T) {
 
 	var rTime time.Time
-	vTime := time.Now()
+	vTime := now
 	if err := checkRoutine(t, vTime, &rTime, false); err != nil {
 		t.Error(err)
 	}
@@ -320,7 +327,7 @@ func TestPrimitiveTime(t *testing.T) {
 	// pointer
 	pvTime := new(time.Time)
 	prTime := new(time.Time)
-	*pvTime = time.Now()
+	*pvTime = now
 	if err := checkRoutine(t, pvTime, prTime, false); err != nil {
 		t.Error(err)
 	}
@@ -524,7 +531,7 @@ func TestStruct(t *testing.T) {
 		Bool:       true,
 		Char:       char.Char('A'),
 		String:     "Parent",
-		Time:       time.Now(),
+		Time:       now,
 		Duration:   time.Duration(123 * time.Second),
 		TimeOffset: datetimeoffset.Now(),
 
@@ -536,7 +543,7 @@ func TestStruct(t *testing.T) {
 			BoolArray:       []bool{true, true, false, false, true},
 			CharArray:       []char.Char{char.Char('X'), char.Char('Y'), char.Char('Z')},
 			StringArray:     []string{"str", "ing", "arr", "ay"},
-			TimeArray:       []time.Time{time.Now(), time.Now(), time.Now()},
+			TimeArray:       []time.Time{now, now, now},
 			TimeOffsetArray: []datetimeoffset.DateTimeOffset{datetimeoffset.Now(), datetimeoffset.Now(), datetimeoffset.Now()},
 			DurationArray:   []time.Duration{time.Duration(1 * time.Nanosecond), time.Duration(2 * time.Nanosecond)},
 
@@ -545,7 +552,7 @@ func TestStruct(t *testing.T) {
 				Int2Uint:        map[int]uint{-1: 2, -3: 4},
 				Float2Bool:      map[float32]bool{-1.1: true, -2.2: false},
 				Char2String:     map[char.Char]string{char.Char('A'): "AA", char.Char('B'): "BB"},
-				Time2TimeOffset: map[time.Time]datetimeoffset.DateTimeOffset{time.Now(): datetimeoffset.Now(), time.Now(): datetimeoffset.Now()},
+				Time2TimeOffset: map[time.Time]datetimeoffset.DateTimeOffset{now: datetimeoffset.Now()},
 				Duration2Struct: map[time.Duration]child3{time.Duration(1 * time.Hour): child3{Int: 1}, time.Duration(2 * time.Hour): child3{Int: 2}},
 			},
 		},
@@ -578,7 +585,7 @@ func TestMap(t *testing.T) {
 
 // for test
 func checkRoutine(t *testing.T, in interface{}, out interface{}, isDebug bool) error {
-	d, err := Serialize(in)
+	d, err := zeroformatter.Serialize(in)
 	if err != nil {
 		return err
 	}
@@ -587,7 +594,7 @@ func checkRoutine(t *testing.T, in interface{}, out interface{}, isDebug bool) e
 		t.Log(in, " -- to byte --> ", d)
 	}
 
-	if err := Deserialize(out, d); err != nil {
+	if err := zeroformatter.Deserialize(out, d); err != nil {
 		return err
 	}
 
