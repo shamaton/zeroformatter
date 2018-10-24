@@ -1,4 +1,4 @@
-package zeroformatter
+package zeroformatter_test
 
 import (
 	"testing"
@@ -6,6 +6,7 @@ import (
 
 	"reflect"
 
+	"github.com/shamaton/zeroformatter"
 	"github.com/shamaton/zeroformatter/char"
 	"github.com/shamaton/zeroformatter/datetimeoffset"
 )
@@ -66,7 +67,7 @@ func TestDelayDeserialize(t *testing.T) {
 		Bool:       true,
 		Char:       char.Char('A'),
 		String:     "Parent",
-		Time:       time.Now(),
+		Time:       now,
 		Duration:   time.Duration(123 * time.Second),
 		TimeOffset: datetimeoffset.Now(),
 
@@ -78,7 +79,7 @@ func TestDelayDeserialize(t *testing.T) {
 			BoolArray:       []bool{true, true, false, false, true},
 			CharArray:       []char.Char{char.Char('X'), char.Char('Y'), char.Char('Z')},
 			StringArray:     []string{"str", "ing", "arr", "ay"},
-			TimeArray:       []time.Time{time.Now(), time.Now(), time.Now()},
+			TimeArray:       []time.Time{now, now, now},
 			TimeOffsetArray: []datetimeoffset.DateTimeOffset{datetimeoffset.Now(), datetimeoffset.Now(), datetimeoffset.Now()},
 			DurationArray:   []time.Duration{time.Duration(1 * time.Nanosecond), time.Duration(2 * time.Nanosecond)},
 
@@ -87,19 +88,19 @@ func TestDelayDeserialize(t *testing.T) {
 				Int2Uint:        map[int]uint{-1: 2, -3: 4},
 				Float2Bool:      map[float32]bool{-1.1: true, -2.2: false},
 				Char2String:     map[char.Char]string{char.Char('A'): "AA", char.Char('B'): "BB"},
-				Time2TimeOffset: map[time.Time]datetimeoffset.DateTimeOffset{time.Now(): datetimeoffset.Now(), time.Now(): datetimeoffset.Now()},
+				Time2TimeOffset: map[time.Time]datetimeoffset.DateTimeOffset{now: datetimeoffset.Now()},
 				Duration2Struct: map[time.Duration]child3{time.Duration(1 * time.Hour): child3{Int: 1}, time.Duration(2 * time.Hour): child3{Int: 2}},
 			},
 		},
 	}
 
-	b, err := Serialize(vSt)
+	b, err := zeroformatter.Serialize(vSt)
 	if err != nil {
 		t.Error(err)
 	}
 
 	eHolder := &st{}
-	dds, err := DelayDeserialize(eHolder, b)
+	dds, err := zeroformatter.DelayDeserialize(eHolder, b)
 	if err != nil {
 		t.Error(err)
 	}
@@ -150,7 +151,7 @@ func TestDelayDeserialize(t *testing.T) {
 
 	iHolder := &st{}
 
-	dds, err = DelayDeserialize(iHolder, b)
+	dds, err = zeroformatter.DelayDeserialize(iHolder, b)
 	if err != nil {
 		t.Error(err)
 	}
@@ -161,7 +162,7 @@ func TestDelayDeserialize(t *testing.T) {
 		t.Error(err)
 	}
 
-	if err := dds.deserializeByIndex(17); err == nil {
+	if err := dds.DeserializeByIndex(17); err == nil {
 		t.Error("index error")
 	}
 
