@@ -1,6 +1,9 @@
 # zeroformatter
 
+[![GoDoc](https://godoc.org/github.com/shamaton/zeroformatter?status.svg)](https://godoc.org/github.com/shamaton/zeroformatter)
 [![Build Status](https://travis-ci.org/shamaton/zeroformatter.svg?branch=master)](https://travis-ci.org/shamaton/zeroformatter)
+[![Coverage Status](https://coveralls.io/repos/github/shamaton/zeroformatter/badge.svg)](https://coveralls.io/github/shamaton/zeroformatter)
+[![Releases](https://img.shields.io/github/release/shamaton/zeroformatter.svg)](https://github.com/shamaton/zeroformatter/releases)
 
 golang version [zeroformatter](https://github.com/neuecc/ZeroFormatter)
 
