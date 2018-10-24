@@ -13,7 +13,8 @@ func Unix(sec int64, nsec int64) DateTimeOffset {
 }
 
 func Now() DateTimeOffset {
+	n := time.Now()
 	return DateTimeOffset{
-		time.Now(),
+		time.Unix(n.Unix(), int64(n.Nanosecond())),
 	}
 }
