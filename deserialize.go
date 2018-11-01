@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"time"
 	"unicode/utf16"
+	"unsafe"
 
 	"github.com/shamaton/zeroformatter/char"
 	"github.com/shamaton/zeroformatter/datetimeoffset"
@@ -257,7 +258,8 @@ func (d *deserializer) deserialize(rv reflect.Value, offset uint32) (uint32, err
 	case reflect.String:
 		b, o := d.readSize4(offset)
 		l := binary.LittleEndian.Uint32(b)
-		v := string(d.data[o : o+l])
+		dd := d.data[o : o+l]
+		v := *(*string)(unsafe.Pointer(&dd))
 		rv.SetString(v)
 		// update
 		offset = o + l
@@ -296,8 +298,6 @@ func (d *deserializer) deserialize(rv reflect.Value, offset uint32) (uint32, err
 		}
 
 	case reflect.Slice:
-		// element type
-		e := rv.Type().Elem()
 
 		// length
 		b, o := d.readSize4(offset)
@@ -311,13 +311,11 @@ func (d *deserializer) deserialize(rv reflect.Value, offset uint32) (uint32, err
 		tmpSlice := reflect.MakeSlice(rv.Type(), l, l)
 
 		for i := 0; i < l; i++ {
-			v := reflect.New(e).Elem()
+			v := tmpSlice.Index(i)
 			o, err = d.deserialize(v, o)
 			if err != nil {
 				return 0, err
 			}
-
-			tmpSlice.Index(i).Set(v)
 		}
 		rv.Set(tmpSlice)
 
@@ -356,13 +354,13 @@ func (d *deserializer) deserialize(rv reflect.Value, offset uint32) (uint32, err
 		key := rv.Type().Key()
 		value := rv.Type().Elem()
 
-		if rv.IsNil() {
-			rv.Set(reflect.MakeMap(rv.Type()))
-		}
-
 		// map length
 		b, o := d.readSize4(offset)
 		l := int(binary.LittleEndian.Uint32(b))
+
+		if rv.IsNil() {
+			rv.Set(reflect.MakeMapWithSize(rv.Type(), l))
+		}
 
 		for i := 0; i < l; i++ {
 			k := reflect.New(key).Elem()
