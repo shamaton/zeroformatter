@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"time"
 	"unicode/utf16"
 	"unsafe"
+
+	"github.com/shamaton/zeroformatter/datetimeoffset"
 )
 
 const (
@@ -295,8 +298,7 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 	case reflect.Int64:
 		if isDuration(rv) {
 			// seconds
-			ns := rv.MethodByName("Nanoseconds").Call([]reflect.Value{})[0]
-			nanoseconds := ns.Int()
+			nanoseconds := rv.Interface().(time.Duration).Nanoseconds()
 			sec, nsec := nanoseconds/(1000*1000), int64(nanoseconds%(1000*1000))
 			d.writeSize8Int64(sec, offset)
 			size += byte8
@@ -382,19 +384,17 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 
 	case reflect.Struct:
 		if isDateTimeOffset(rv) {
+			v := rv.Interface().(datetimeoffset.DateTimeOffset)
 
 			// offset
-			rets := rv.MethodByName("Zone").Call([]reflect.Value{})
-			_, offSec := rets[0] /*name*/, rets[1].Int() /*offset*/
-			offMin := offSec / 60
+			_, offSec := v.Zone()
+			offMin := int64(offSec) / 60
 
 			// seconds
-			rets = rv.MethodByName("Unix").Call([]reflect.Value{})
-			seconds := rets[0].Int() + offSec
+			seconds := v.Unix() + int64(offSec)
 
 			// nanos
-			rets = rv.MethodByName("Nanosecond").Call([]reflect.Value{})
-			nanos := rets[0].Int()
+			nanos := v.Nanosecond()
 
 			// seconds to byte
 			d.writeSize8Int64(seconds, offset)
@@ -402,7 +402,7 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 			offset += byte8
 
 			// nanos to byte
-			d.writeSize4Int64(nanos, offset)
+			d.writeSize4Int(nanos, offset)
 			size += byte4
 			offset += byte4
 
@@ -410,17 +410,16 @@ func (d *serializer) serialize(rv reflect.Value, offset uint32) (uint32, error) 
 			d.writeSize2Int64(offMin, offset)
 			size += byte2
 		} else if isDateTime(rv) {
+			v := rv.Interface().(time.Time)
 			// seconds
-			unixTime := rv.MethodByName("Unix").Call([]reflect.Value{})
-			sec := unixTime[0].Int()
+			sec := v.Unix()
 			d.writeSize8Int64(sec, offset)
 			size += byte8
 			offset += byte8
 
 			// nanos
-			rets := rv.MethodByName("Nanosecond").Call([]reflect.Value{})
-			nsec := rets[0].Int()
-			d.writeSize4Int64(nsec, offset)
+			nsec := v.Nanosecond()
+			d.writeSize4Int(nsec, offset)
 			size += byte4
 		} else {
 			for i := 0; i < rv.NumField(); i++ {
