@@ -10,8 +10,8 @@ import (
 	"unicode/utf16"
 	"unsafe"
 
-	"github.com/shamaton/zeroformatter/char"
-	"github.com/shamaton/zeroformatter/datetimeoffset"
+	"github.com/shamaton/zeroformatter/v2/char"
+	"github.com/shamaton/zeroformatter/v2/datetimeoffset"
 )
 
 type deserializer struct {

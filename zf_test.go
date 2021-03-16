@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shamaton/zeroformatter"
-	"github.com/shamaton/zeroformatter/char"
-	"github.com/shamaton/zeroformatter/datetimeoffset"
+	"github.com/shamaton/zeroformatter/v2"
+	"github.com/shamaton/zeroformatter/v2/char"
+	"github.com/shamaton/zeroformatter/v2/datetimeoffset"
 )
 
 var now time.Time
